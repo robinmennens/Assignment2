@@ -10,8 +10,44 @@
 
     <title>Visualization Assignment 2</title>
 
-    <style type="text/css">
+    <style type="text/css">        
+        .matrix{
 
+        }
+
+        .forcedirected{
+
+        }
+
+        .background {
+          fill: #eee;
+        }
+
+        line {
+          stroke: #fff;
+        }
+
+        text.active {
+          fill: red;
+        }
+
+        text {
+            font-family: sans-serif;
+            fill: black;
+            font-size: 11px;
+        }
+
+        .links line {
+          stroke: #999;
+          stroke-opacity: 0.6;
+        }
+
+        .nodes circle {
+          stroke: #fff;
+          stroke-width: 1.5px;
+        }
+
+        /*
         svg {
           font-size: 14px;
         }
@@ -59,7 +95,7 @@
         .axis text {
           text-shadow: 0 1px 0 #fff;
           cursor: move;
-        }
+        }*/
 
     </style>
 
@@ -151,30 +187,21 @@
 
             <div class="container-fluid">
 
-                <!-- Page Heading -->
-                <div class="row">
-                    <div class="col-lg-12">
-                        <h1 class="page-header">
-                            Our own page <small>Visualizations below</small>
-                        </h1>
-                        <ol class="breadcrumb">
-                            <li class="active">
-                                <i class="fa fa-dashboard"></i> Dashboard
-                            </li>
-                        </ol>
-                    </div>
-                </div>
+                <!-- Page Heading -->                
                 <!-- /.row -->  
                 <div class="row">
-                    <div class="col-lg-12">
-                        <div class="panel panel-primary">
-                            <div class="panel-heading">
-                                <h3 class="panel-title"><i class="fa fa-bar-chart-o"></i> Test</h3>
-                            </div>
-                            <div class="panel-body">
-                                <!--<svg width="960" height="960"></svg>-->
-                            </div>
-                        </div>
+                    <div class="col-lg-6" style="padding: 0px">
+                        <!--<aside style="margin-top:10px;"/>-->
+                        <div class="panel-body matrix" style="padding: 0px;">
+                            <p>Order: 
+                            <select id="order">
+                              <option value="name">by Name</option>
+                              <option value="count">by Frequency</option>                              
+                            </select> 
+                        </div>                                                                       
+                    </div>
+                    <div class="col-lg-6" style="padding: 0px">                                        
+                        <div class="panel-body forcedirected" style="padding: 0px;"></div>                        
                     </div>
                 </div>                              
 
@@ -193,15 +220,20 @@
     <!-- Bootstrap Core JavaScript -->
     <script src="js/bootstrap.min.js"></script>
 
-    <!-- D3.JS V4
+    
+
+    <!-- D3.JS V3
+    <script src="js/plugins/d3.minV3.js"></script>-->
+    
+    <!-- PCP.JS 
+    <script src="js/PCP.js"></script>-->
+
+    <!-- D3.JS V4 -->
     <script src="js/plugins/d3.minV4.js"></script>
-    -->
-
-    <!-- D3.JS V3-->
-    <script src="js/plugins/d3.minV3.js"></script>
-
-    <!-- PCP.JS -->
-    <script src="js/PCP.js"></script>
+    <!--Matrix.JS -->
+    <script src="js/matrixv4.js"></script>
+    
+    <script src="js/forcedirected.js"></script>
 
     <!--
     <script src="js/importdata.js"></script>-->
