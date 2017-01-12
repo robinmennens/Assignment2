@@ -10,6 +10,13 @@ var x = d3.scaleBand().range([0, width]),
     z = d3.scaleLinear().domain([0, 4]).clamp(true),
     c = d3.scaleOrdinal(d3.schemeCategory10);
 
+//c defines the different color scales
+var colorrange = {
+  none: ["blue"],
+  count: ["lightcoral", "red", "darkred"],
+  group: d3.schemeCategory10
+}
+
 //select panel-body and add an svg to it
 var svg = d3.select(".matrix").append("svg")
     .attr("width", width + margin.left + margin.right)
@@ -58,7 +65,8 @@ d3.json("miserables/les_miserables.json", function(miserables) {
     name: d3.range(n).sort(function(a, b) { return d3.ascending(nodes[a].label, nodes[b].label); }),
     //order based on the frequencies of the nodes
     count: d3.range(n).sort(function(a, b) { return nodes[b].count - nodes[a].count; }),
-    //group: d3.range(n).sort(function(a, b) { return nodes[b].group - nodes[a].group; })
+    //order based on clustering
+    group: d3.range(n).sort(function(a, b) { return nodes[b].group - nodes[a].group; })
   };
 
   // The default sort order.
@@ -115,7 +123,8 @@ d3.json("miserables/les_miserables.json", function(miserables) {
         .style("fill-opacity", function(d) { return z(d.z); })
         .style("fill", function(d) { return nodes[d.x].group == nodes[d.y].group ? c(nodes[d.x].group) : null; })
         .on("mouseover", mouseover)
-        .on("mouseout", mouseout);
+        .on("mouseout", mouseout)
+        .append("title").text(function(d) { return d.z; });
   }
 
   function mouseover(p) {
@@ -130,6 +139,11 @@ d3.json("miserables/les_miserables.json", function(miserables) {
   //when the order dropdown value is changed, change the sort order
   d3.select("#order").on("change", function() {
     order(this.value);
+  });
+
+  //when the color dropdown value is changed, change the sort order
+  d3.select("#coloring").on("change", function() {
+    recolor(this.value);
   });
 
   //function called to change the order of the axis
@@ -149,5 +163,14 @@ d3.json("miserables/les_miserables.json", function(miserables) {
     t.selectAll(".column")
         .delay(function(d, i) { return x(i) * 4; })
         .attr("transform", function(d, i) { return "translate(" + x(i) + ")rotate(-90)"; });
+  }
+
+  //function called to change the order of the axis
+  function recolor(value) {
+    //change the domain
+    c.range(colorrange[value]);
+
+    d3.selectAll(".cell")
+    .style("fill", function(d) { return value == "count" ? c(nodes[d.x].count) : c(nodes[d.x].group); })
   }
 });

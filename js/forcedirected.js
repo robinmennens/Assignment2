@@ -7,7 +7,7 @@ var svg2 = d3.select(".forcedirected").append("svg")
     .style("display", "block")
     .style("margin", "auto");    
 
-var color = d3.scaleOrdinal(d3.schemeCategory20);
+//var color = d3.scaleOrdinal(d3.schemeCategory20);
 
 var simulation = d3.forceSimulation()
     .force("link", d3.forceLink().id(function(d) { return d.id; }))
@@ -30,7 +30,7 @@ d3.json("miserables/les_miserables.json", function(error, graph) {
     .data(graph.nodes)
     .enter().append("circle")
       .attr("r", 5)
-      .attr("fill", function(d) { return d3.color.blue/*color(d.group)*/; })
+      .attr("fill", function(d) { return c(d.group); })
       .call(d3.drag()
           .on("start", dragstarted)
           .on("drag", dragged)

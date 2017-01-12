@@ -1,0 +1,4 @@
+-Show number of occurrences in grid
+-In the grid, when hovering over a rectangle, the row and column it is located in light up a bit (until the point where the rectangle is located)
+-Link the grid to the graph, clicking on a name also selects the node in the graph and clicking on a rectangle also lights up the edge in the graph, and vice versa
+-Make a "Focussed Graph" part which only shows a small part of the network including labels, etc.
