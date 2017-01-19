@@ -8,8 +8,7 @@ var margin = {top: 100, right: 0, bottom: 0, left: 100},
 
   var colorScales = {
     none: d3.scaleOrdinal(["blue"]),
-    count: d3.scaleQuantize().domain([0, 159]).range([
-      d3.rgb(149, 255, 0), 
+    count: d3.scaleQuantize().domain([0, 159]).range([      
       d3.rgb(170, 225, 0),
       d3.rgb(191, 225, 0),
       d3.rgb(213, 225, 0),
@@ -28,7 +27,6 @@ var margin = {top: 100, right: 0, bottom: 0, left: 100},
       d3.rgb(255, 0, 0)]),
     group: d3.scaleOrdinal(d3.schemeCategory10)
   }
-
 
 //x is a ordinal scale (text values) and it uses the width of the svg to map to
 //z is a scale that linearly maps the number of occurences of a "pair" to a value
@@ -52,8 +50,7 @@ var svg = d3.select(".matrix").append("svg")
 //get the data
 d3.json("miserables/les_miserables.json", function(miserables) {
   //set up matrix, array of nodes and total nr of nodes
-  var matrix = [],
-      nodeCount = [],
+  var matrix = [],      
       nodes = miserables.nodes,
       n = nodes.length;
 
@@ -167,7 +164,7 @@ d3.json("miserables/les_miserables.json", function(miserables) {
 
   //when the color dropdown value is changed, change the sort order
   d3.select("#coloring").on("change", function() {
-    recolormatrix(this.value);
+    recolor(this.value);
   });
 
   //function called to change the order of the axis
@@ -190,11 +187,9 @@ d3.json("miserables/les_miserables.json", function(miserables) {
   }
 
   //function called to change the order of the axis
-  function recolormatrix(value) {
+  function recolor(value) {
     //change the scale
     c = colorScales[value];
-    //c.range(colorrange[value]);
-    //c.domain(colordomain[value]);
 
     d3.selectAll(".cell")
     .style("fill", function(d) { 
