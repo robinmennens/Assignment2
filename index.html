@@ -20,6 +20,10 @@
 
         }
 
+        .focusgraph{
+
+        }
+
         .background {
           fill: #eee;
         }
@@ -73,26 +77,28 @@
                 <!-- /.row -->  
                 <div class="row">
                     <div class="col-lg-6" style="padding: 0px">
-                        <!--<aside style="margin-top:10px;"/>-->
+                        <!--<aside style="margin-top:10px;"/>-->                        
                         <div class="panel-body matrix" style="padding: 0px;">
+
                             Order: 
                             <select id="order">
                               <option value="name">by Name</option>
                               <option value="count">by Frequency</option> 
                               <option value="group">by Cluster</option>                             
                             </select> 
+
                             Color: 
                             <select id="coloring">
                               <option value="group">by Cluster</option>                                 
                               <option value="count">by Frequency</option> 
-                              <option value="none">None</option>
-                                                        
+                              <option value="none">None</option>                         
                             </select> 
-                        </div>                                                                       
-                    </div>
+                        </div>                                                                                          
+                    </div>                    
                     <div class="col-lg-6" style="padding: 0px">                                        
-                        <div class="panel-body forcedirected" style="padding: 0px;"></div>                        
-                    </div>
+                        <div class="panel-body forcedirected" style="padding: 0px;"></div>                                                                   
+                        <div class="panel-body focusgraph" style="padding: 0px;"></div>                        
+                    </div>                   
                 </div>                              
 
             </div>

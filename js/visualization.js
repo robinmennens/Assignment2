@@ -186,13 +186,14 @@ d3.json("miserables/les_miserables.json", function(miserables) {
 
   /** (M) WORKING ON THIS */
   function onTextClick(d, i){
-
+    // save the radius of the clicked node
     var oldRadius = d3.selectAll("circle").filter(function(p){ return i == p.id; }).attr("r");
     console.log(oldRadius);
 
     // shrink all the circles
     d3.selectAll("circle").attr("r", 5);
 
+    // highlight or shrink the clicked one
     d3.selectAll("circle").filter(function(p){ return i == p.id; })
       .attr("r", function(){ return (oldRadius == 5) ? 15 : 5; });
   }
