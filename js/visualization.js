@@ -3,8 +3,8 @@
 
 //set up the margins, width and height of the svg to be constructed
 var margin = {top: 100, right: 0, bottom: 0, left: 100},
-    width = 640,
-    height = 640;
+    width = 800,
+    height = 800;
 
 var colorScales = {
   none: d3.scaleOrdinal(["blue"]),
@@ -113,8 +113,8 @@ d3.json("miserables/les_miserables.json", function(miserables) {
       .attr("dy", ".32em")
       .attr("text-anchor", "end")
       .text(function(d, i) { return nodes[i].label; })
-      .on("click", onTextClick)  // (M) attach a function to call on click
-      .on("mouseover", onMouseOver2);
+      .on("click", onNodeClick)  // (M) attach a function to call on click
+      .on("mouseover", onMouseOverText);
 
   //set up columns
   var column = svg.selectAll(".column")
@@ -123,8 +123,7 @@ d3.json("miserables/les_miserables.json", function(miserables) {
       .attr("class", "column")
       .attr("transform", function(d, i) { return "translate(" + x(i) + ")rotate(-90)"; });
 
-  column.append("line")
-      .attr("x1", -width);
+  column.append("line").attr("x1", -width);
 
   column.append("text")
       .attr("x", 6)
@@ -132,8 +131,8 @@ d3.json("miserables/les_miserables.json", function(miserables) {
       .attr("dy", ".32em")
       .attr("text-anchor", "start")
       .text(function(d, i) { return nodes[i].label; })
-      .on("click", onTextClick)  // (M) attach a function to call on click
-      .on("mouseover", onMouseOver2);
+      .on("click", onNodeClick)  // (M) attach a function to call on click
+      .on("mouseover", onMouseOverText);
 
   function row(row) {
     var cell = d3.select(this).selectAll(".cell")
@@ -146,63 +145,43 @@ d3.json("miserables/les_miserables.json", function(miserables) {
         .attr("x", function(d) { return x(d.x); })
         .attr("width", x.bandwidth())
         .attr("height", x.bandwidth())
-        .style("fill-opacity", function(d) { 1/*return z(d.z)*/; })
+        .style("fill-opacity", 1)
         //color the rectangle based on cluster.. check if the endpoints of the pair belong to the same cluster
         // (M) this changed!!!
-        .style("fill", function(d) {
-            if (nodes[d.x].group == nodes[d.y].group) {
-              // if the cell refers to a relationship between 2 characters in the same group
-              return c(nodes[d.x].group);
-            } else if (d.z >= 1) {
-              // if the cell still refers to some relationship
-              return null;
-            } else {
-              // if the cell is an empty one
-              return noColor;
-            }
-          })
-        /*.on("click", onCellClick)*/
-        .on("mouseover", onMouseOver)
-        .on("mouseout", onMouseOut)
+        .style("fill", recolor(coloring.value))
+        .on("click", onCellClick)
+        .on("mouseover", onMouseOverCell)
+        .on("mouseout", onMouseOutCell)
         .append("title")
         .text(function(d) { return d.z; });
   }
 
-  function onMouseOver(p) {
-    console.log("p:" + p.y);
-    d3.selectAll(".row text").classed("active", function(d, i) { /*console.log("d:" + d); console.log("i:" + i);*/ return i == p.y; });
-    d3.selectAll(".column text").classed("active", function(d, i) { return i == p.x; });
+  function onMouseOverCell(p) {
+    d3.selectAll(".row").filter(function(d, j){ return p.y+1 == j; })
+      .selectAll(".cell").filter(function(d, j){ return j != p.x; })
+      .style("fill", "black");
+    d3.selectAll(".row").filter(function(d, j){ return p.y+1 != j; })
+      .selectAll(".cell").filter(function(d, j){return j == p.x;})
+      .style("fill", "black");
+    d3.select(this).filter(function(){ return p.z; }).style("cursor", "pointer");
+    d3.selectAll(".row text").classed("active", function(d, j) { return j == p.y; });
+    d3.selectAll(".column text").classed("active", function(d, j) { return j == p.x; });
   }
 
-  function onMouseOver2(p, i) {
+  function onMouseOverText(p, i) {
     console.log("i:" + i);
     d3.selectAll(".row text").classed("active", function(d, j) { return i == j; }).style("cursor", "pointer");
     d3.selectAll(".column text").classed("active", function(d, j) { return i == j; }).style("cursor", "pointer");
   }
 
-  function onMouseOut() {
+  function onMouseOutCell() {
+    recolor(coloring.value);
     d3.selectAll("text").classed("active", false);
   }
 
-  /** (M) WORKING ON THIS */
-  function onTextClick(d, i){
-    // save the radius of the clicked node
-    var oldRadius = d3.selectAll("circle").filter(function(p){ return i == p.id; }).attr("r");
-    console.log(oldRadius);
-
-    // shrink all the circles
-    d3.selectAll("circle").attr("r", 5);
-
-    // highlight or shrink the clicked one
-    d3.selectAll("circle").filter(function(p){ return i == p.id; })
-      .attr("r", function(){ return (oldRadius == 5) ? 15 : 5; });
+  function onCellClick(d){
+    onEdgeClick(d.x, d.y);
   }
-
-  /** (M) WORKING ON THIS */
-  /*function onCellClick(d){
-    d3.selectAll("circle").filter(function(node){ return d.text == node.title; })
-      .style("r", 8);
-  }*/
 
   //when the order dropdown value is changed, change the sort order
   d3.select("#order").on("change", function() {
@@ -301,7 +280,8 @@ d3.json("miserables/les_miserables.json", function(error, graph) {
     .selectAll("line")
     .data(graph.edges)
     .enter().append("line")
-      .attr("stroke-width", function(d) { return Math.sqrt(d.value); });
+      .attr("stroke-width", function(d) { return Math.sqrt(d.value); })
+      .on("mouseover", mouseOverForceGraph);
 
   var node = svg2.append("g")
       .attr("class", "nodes")
@@ -313,7 +293,9 @@ d3.json("miserables/les_miserables.json", function(error, graph) {
       .call(d3.drag()
           .on("start", dragstarted)
           .on("drag", dragged)
-          .on("end", dragended));
+          .on("end", dragended))
+      .on("click", onNodeClick)
+      .on("mouseover", mouseOverForceGraph);
 
   node.append("title")
       .text(function(d) { return d.label; });
@@ -354,4 +336,27 @@ function dragended(d) {
   if (!d3.event.active) simulation.alphaTarget(0);
   d.fx = null;
   d.fy = null;
+}
+
+function mouseOverForceGraph(){
+  d3.select(this).style("cursor", "pointer");
+}
+
+function onNodeClick(d, i){
+  var r = d3.selectAll("circle").filter(function(p){ return i == p.id; }).attr("r");
+  // if a circle has been clicked then shrink all the circles and then select the correct one
+  d3.selectAll("circle").attr("r", 5);
+  d3.selectAll("circle").filter(function(p){ return i == p.id; })
+    .attr("r", function(){ return (r == 5) ? 15 : 5; });
+}
+
+function onEdgeClick(x, y){
+  var rx = d3.selectAll("circle").filter(function(p){ return x == p.id; }).attr("r");
+  var ry = d3.selectAll("circle").filter(function(p){ return y == p.id; }).attr("r");
+  // if a circle has been clicked then shrink all the circles and then select the correct one
+  d3.selectAll("circle").attr("r", 5);
+  d3.selectAll("circle").filter(function(p){ return x == p.id; })
+    .attr("r", function(){ return (rx == 5) ? 15 : 5; });
+  d3.selectAll("circle").filter(function(p){ return y == p.id; })
+    .attr("r", function(){ return (ry == 5) ? 15 : 5; });
 }
