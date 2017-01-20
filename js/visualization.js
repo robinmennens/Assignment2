@@ -6,27 +6,27 @@ var margin = {top: 100, right: 0, bottom: 0, left: 100},
     width = 640,
     height = 640;
 
-  var colorScales = {
-    none: d3.scaleOrdinal(["blue"]),
-    count: d3.scaleQuantize().domain([0, 159]).range([      
-      d3.rgb(170, 225, 0),
-      d3.rgb(191, 225, 0),
-      d3.rgb(213, 225, 0),
-      d3.rgb(234, 225, 0),
-      d3.rgb(255, 255, 0), 
-      d3.rgb(255, 232, 0),
-      d3.rgb(255, 212, 0),
-      d3.rgb(255, 191, 0),
-      d3.rgb(255, 170, 0),
-      d3.rgb(255, 127, 0),
-      d3.rgb(255, 106, 0),
-      d3.rgb(255, 85, 0),
-      d3.rgb(255, 64, 0),
-      d3.rgb(255, 42, 0),
-      d3.rgb(255, 21, 0),
-      d3.rgb(255, 0, 0)]),
-    group: d3.scaleOrdinal(d3.schemeCategory10)
-  }
+var colorScales = {
+  none: d3.scaleOrdinal(["blue"]),
+  count: d3.scaleQuantize().domain([0, 159]).range([      
+    d3.rgb(170, 225, 0),
+    d3.rgb(191, 225, 0),
+    d3.rgb(213, 225, 0),
+    d3.rgb(234, 225, 0),
+    d3.rgb(255, 255, 0), 
+    d3.rgb(255, 232, 0),
+    d3.rgb(255, 212, 0),
+    d3.rgb(255, 191, 0),
+    d3.rgb(255, 170, 0),
+    d3.rgb(255, 127, 0),
+    d3.rgb(255, 106, 0),
+    d3.rgb(255, 85, 0),
+    d3.rgb(255, 64, 0),
+    d3.rgb(255, 42, 0),
+    d3.rgb(255, 21, 0),
+    d3.rgb(255, 0, 0)]),
+  group: d3.scaleOrdinal(d3.schemeCategory10)
+}
 
 //x is a ordinal scale (text values) and it uses the width of the svg to map to
 //z is a scale that linearly maps the number of occurences of a "pair" to a value
@@ -113,7 +113,8 @@ d3.json("miserables/les_miserables.json", function(miserables) {
       .attr("dy", ".32em")
       .attr("text-anchor", "end")
       .text(function(d, i) { return nodes[i].label; })
-      .on("click", onTextClick);  // (M) attach a function to call on click
+      .on("click", onTextClick)  // (M) attach a function to call on click
+      .on("mouseover", onMouseOver2);
 
   //set up columns
   var column = svg.selectAll(".column")
@@ -131,7 +132,8 @@ d3.json("miserables/les_miserables.json", function(miserables) {
       .attr("dy", ".32em")
       .attr("text-anchor", "start")
       .text(function(d, i) { return nodes[i].label; })
-      .on("click", onTextClick);  // (M) attach a function to call on click
+      .on("click", onTextClick)  // (M) attach a function to call on click
+      .on("mouseover", onMouseOver2);
 
   function row(row) {
     var cell = d3.select(this).selectAll(".cell")
@@ -167,8 +169,15 @@ d3.json("miserables/les_miserables.json", function(miserables) {
   }
 
   function onMouseOver(p) {
-    d3.selectAll(".row text").classed("active", function(d, i) { return i == p.y; });
+    console.log("p:" + p.y);
+    d3.selectAll(".row text").classed("active", function(d, i) { /*console.log("d:" + d); console.log("i:" + i);*/ return i == p.y; });
     d3.selectAll(".column text").classed("active", function(d, i) { return i == p.x; });
+  }
+
+  function onMouseOver2(p, i) {
+    console.log("i:" + i);
+    d3.selectAll(".row text").classed("active", function(d, j) { return i == j; }).style("cursor", "pointer");
+    d3.selectAll(".column text").classed("active", function(d, j) { return i == j; }).style("cursor", "pointer");
   }
 
   function onMouseOut() {
@@ -177,10 +186,15 @@ d3.json("miserables/les_miserables.json", function(miserables) {
 
   /** (M) WORKING ON THIS */
   function onTextClick(d, i){
-    var radius;
+
+    var oldRadius = d3.selectAll("circle").filter(function(p){ return i == p.id; }).attr("r");
+    console.log(oldRadius);
+
+    // shrink all the circles
+    d3.selectAll("circle").attr("r", 5);
 
     d3.selectAll("circle").filter(function(p){ return i == p.id; })
-      .style("r", function(){ console.log(this.r); console.log(this.r == 5); return 10; })
+      .attr("r", function(){ return (oldRadius == 5) ? 15 : 5; });
   }
 
   /** (M) WORKING ON THIS */
