@@ -33,7 +33,8 @@ var margin = {top: 100, right: 0, bottom: 0, left: 100},
 //c is a color scale: Constructs a new ordinal scale with a range of ten categorical colors:
 var x = d3.scaleBand().range([0, width]),
     z = d3.scaleLinear().domain([0, 4]).clamp(true),
-    c = colorScales["group"];
+    c = colorScales["group"],
+    noColor = "#E8E6E5";  // (M) the color of the empty cells
 
 //select panel-body and add an svg to it
 var svg = d3.select(".matrix").append("svg")
@@ -44,8 +45,6 @@ var svg = d3.select(".matrix").append("svg")
     .style("margin", "auto")
   .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-
 
 //get the data
 d3.json("miserables/les_miserables.json", function(miserables) {
@@ -113,7 +112,8 @@ d3.json("miserables/les_miserables.json", function(miserables) {
       .attr("y", x.bandwidth() / 2)
       .attr("dy", ".32em")
       .attr("text-anchor", "end")
-      .text(function(d, i) { return nodes[i].label; });
+      .text(function(d, i) { return nodes[i].label; })
+      .on("click", onTextClick);  // (M) attach a function to call on click
 
   //set up columns
   var column = svg.selectAll(".column")
@@ -130,11 +130,15 @@ d3.json("miserables/les_miserables.json", function(miserables) {
       .attr("y", x.bandwidth() / 2)
       .attr("dy", ".32em")
       .attr("text-anchor", "start")
-      .text(function(d, i) { return nodes[i].label; });
+      .text(function(d, i) { return nodes[i].label; })
+      .on("click", onTextClick);  // (M) attach a function to call on click
 
   function row(row) {
     var cell = d3.select(this).selectAll(".cell")
-        .data(row.filter(function(d) { return d.z; }))
+        // (M) we don't filter anymore for cells that have z!
+        // Doing in this way we have a cell for every pair of characters
+        // To refer to the cells that actually represent a relationship we have to check if z >= 
+        .data(row/*.filter(function(d) { return d.z; })*/) 
       .enter().append("rect")
         .attr("class", "cell")
         .attr("x", function(d) { return x(d.x); })
@@ -142,20 +146,48 @@ d3.json("miserables/les_miserables.json", function(miserables) {
         .attr("height", x.bandwidth())
         .style("fill-opacity", function(d) { 1/*return z(d.z)*/; })
         //color the rectangle based on cluster.. check if the endpoints of the pair belong to the same cluster
-        .style("fill", function(d) { return nodes[d.x].group == nodes[d.y].group ? c(nodes[d.x].group) : null; })
-        .on("mouseover", mouseover)
-        .on("mouseout", mouseout)
-        .append("title").text(function(d) { return d.z; });
+        // (M) this changed!!!
+        .style("fill", function(d) {
+            if (nodes[d.x].group == nodes[d.y].group) {
+              // if the cell refers to a relationship between 2 characters in the same group
+              return c(nodes[d.x].group);
+            } else if (d.z >= 1) {
+              // if the cell still refers to some relationship
+              return null;
+            } else {
+              // if the cell is an empty one
+              return noColor;
+            }
+          })
+        /*.on("click", onCellClick)*/
+        .on("mouseover", onMouseOver)
+        .on("mouseout", onMouseOut)
+        .append("title")
+        .text(function(d) { return d.z; });
   }
 
-  function mouseover(p) {
+  function onMouseOver(p) {
     d3.selectAll(".row text").classed("active", function(d, i) { return i == p.y; });
     d3.selectAll(".column text").classed("active", function(d, i) { return i == p.x; });
   }
 
-  function mouseout() {
+  function onMouseOut() {
     d3.selectAll("text").classed("active", false);
   }
+
+  /** (M) WORKING ON THIS */
+  function onTextClick(d, i){
+    var radius;
+
+    d3.selectAll("circle").filter(function(p){ return i == p.id; })
+      .style("r", function(){ console.log(this.r); console.log(this.r == 5); return 10; })
+  }
+
+  /** (M) WORKING ON THIS */
+  /*function onCellClick(d){
+    d3.selectAll("circle").filter(function(node){ return d.text == node.title; })
+      .style("r", 8);
+  }*/
 
   //when the order dropdown value is changed, change the sort order
   d3.select("#order").on("change", function() {
@@ -192,18 +224,22 @@ d3.json("miserables/les_miserables.json", function(miserables) {
     c = colorScales[value];
 
     d3.selectAll(".cell")
-    .style("fill", function(d) { 
-      if(value == "count"){
-        return c(d.z); 
-      } else if (value == "group"){
-        if(nodes[d.x].group == nodes[d.y].group){
-          return c(nodes[d.x].group); 
+    .style("fill", function(d) {
+      if(d.z >= 1){
+        if(value == "count"){
+          return c(d.z); 
+        } else if (value == "group"){
+          if(nodes[d.x].group == nodes[d.y].group){
+            return c(nodes[d.x].group); 
+          } else {
+            return null;
+          }
         } else {
-          return null;
+            return(c(d.z));
         }
       } else {
-          return(c(d.z));
-      }
+        return noColor;
+      }     
     })
 
     //update the graph
