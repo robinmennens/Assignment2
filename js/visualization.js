@@ -1,40 +1,48 @@
-// MATRIX STARTS HERE ------------------------------------------------
+//GENERAL VARIABLES ---------------------------------
+var colorScales = {
+  none: d3.scaleOrdinal(["blue"]),
+  count: d3.scaleQuantize().domain([0, 159]).range([      
+    d3.rgb(170, 225, 0),
+    d3.rgb(191, 225, 0),
+    d3.rgb(213, 225, 0),
+    d3.rgb(234, 225, 0),
+    d3.rgb(255, 255, 0), 
+    d3.rgb(255, 232, 0),
+    d3.rgb(255, 212, 0),
+    d3.rgb(255, 191, 0),
+    d3.rgb(255, 170, 0),
+    d3.rgb(255, 127, 0),
+    d3.rgb(255, 106, 0),
+    d3.rgb(255, 85, 0),
+    d3.rgb(255, 64, 0),
+    d3.rgb(255, 42, 0),
+    d3.rgb(255, 21, 0),
+    d3.rgb(255, 0, 0)]),
+  group: d3.scaleOrdinal(d3.schemeCategory10)
+}
 
+//maps values to colors
+var c = colorScales["group"];
+
+// contains data about the relations between nodes
+var matrix = [];
+// contains data about the nodes themselves
+var nodes = [];
+
+
+// MATRIX VARIABLES ------------------------------------------------
 
 //set up the margins, width and height of the svg to be constructed
 var margin = {top: 100, right: 0, bottom: 0, left: 100},
     width = 640,
     height = 640;
 
-  var colorScales = {
-    none: d3.scaleOrdinal(["blue"]),
-    count: d3.scaleQuantize().domain([0, 159]).range([      
-      d3.rgb(170, 225, 0),
-      d3.rgb(191, 225, 0),
-      d3.rgb(213, 225, 0),
-      d3.rgb(234, 225, 0),
-      d3.rgb(255, 255, 0), 
-      d3.rgb(255, 232, 0),
-      d3.rgb(255, 212, 0),
-      d3.rgb(255, 191, 0),
-      d3.rgb(255, 170, 0),
-      d3.rgb(255, 127, 0),
-      d3.rgb(255, 106, 0),
-      d3.rgb(255, 85, 0),
-      d3.rgb(255, 64, 0),
-      d3.rgb(255, 42, 0),
-      d3.rgb(255, 21, 0),
-      d3.rgb(255, 0, 0)]),
-    group: d3.scaleOrdinal(d3.schemeCategory10)
-  }
-
 //x is a ordinal scale (text values) and it uses the width of the svg to map to
 //z is a scale that linearly maps the number of occurences of a "pair" to a value
-//c is a color scale: Constructs a new ordinal scale with a range of ten categorical colors:
 var x = d3.scaleBand().range([0, width]),
-    z = d3.scaleLinear().domain([0, 4]).clamp(true),
-    c = colorScales["group"],
-    noColor = "#E8E6E5";  // (M) the color of the empty cells
+    z = d3.scaleLinear().domain([0, 4]).clamp(true);
+    
+noColor = "#E8E6E5";  // (M) the color of the empty cells
 
 //select panel-body and add an svg to it
 var svg = d3.select(".matrix").append("svg")
@@ -46,12 +54,53 @@ var svg = d3.select(".matrix").append("svg")
   .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
+
+// GRAPH VARIABLES --------------------------------------------------
+
+
+width2 = 740,
+height2 = 550;
+
+var svg2 = d3.select(".forcedirected").append("svg")
+    .attr("width", width2)
+    .attr("height", height2)   
+    .style("display", "block")
+    .style("margin", "auto");    
+
+var simulation = d3.forceSimulation()
+    .force("link", d3.forceLink().id(function(d) { return d.id; }))
+    .force("charge", d3.forceManyBody().strength(-50))
+    .force("center", d3.forceCenter(width2 / 2, (height2 / 2) + 35));
+
+
+// FOCUS GRAPH VARIABLES --------------------------------------------
+
+
+width3 = 740,
+height3 = 210;
+
+var svg3 = d3.select(".focusgraph").append("svg")
+    .attr("width", width3)
+    .attr("height", height3)   
+    .style("display", "block")
+    .style("margin", "auto");    
+
+var simulation2 = d3.forceSimulation()
+    .force("link", d3.forceLink().id(function(d) { return d.id; }))
+    .force("charge", d3.forceManyBody().strength(-50))
+    .force("center", d3.forceCenter(width2 / 2, (height2 / 2)));
+
+
+// DATA INITIALIZATION ----------------------------------------------
+
+
 //get the data
-d3.json("miserables/les_miserables.json", function(miserables) {
-  //set up matrix, array of nodes and total nr of nodes
-  var matrix = [],      
-      nodes = miserables.nodes,
-      n = nodes.length;
+d3.json("miserables/les_miserables.json", function(error, miserables) {
+  if (error) throw error
+
+  //set up matrix, array of nodes and total nr of nodes  
+  nodes = miserables.nodes,
+  n = nodes.length;
 
   // Compute index per node.
   nodes.forEach(function(node, i) {
@@ -88,6 +137,19 @@ d3.json("miserables/les_miserables.json", function(miserables) {
     group: d3.range(n).sort(function(a, b) { return nodes[b].group - nodes[a].group; })
   };
 
+  //when the order dropdown value is changed, change the sort order
+  d3.select("#order").on("change", function() {
+    order(this.value);
+  });
+
+  //when the color dropdown value is changed, change the sort order
+  d3.select("#coloring").on("change", function() {
+    recolor(this.value);
+  });
+
+  // MATRIX SETUP --------------------------------------------------
+
+
   // The default sort order.
   x.domain(orders.name);
 
@@ -113,7 +175,7 @@ d3.json("miserables/les_miserables.json", function(miserables) {
       .attr("dy", ".32em")
       .attr("text-anchor", "end")
       .text(function(d, i) { return nodes[i].label; })
-      .on("click", onTextClick);  // (M) attach a function to call on click
+      .on("click", onNodeClick);  // (M) attach a function to call on click
 
   //set up columns
   var column = svg.selectAll(".column")
@@ -131,7 +193,7 @@ d3.json("miserables/les_miserables.json", function(miserables) {
       .attr("dy", ".32em")
       .attr("text-anchor", "start")
       .text(function(d, i) { return nodes[i].label; })
-      .on("click", onTextClick);  // (M) attach a function to call on click
+      .on("click", onNodeClick);  // (M) attach a function to call on click
 
   function row(row) {
     var cell = d3.select(this).selectAll(".cell")
@@ -162,42 +224,21 @@ d3.json("miserables/les_miserables.json", function(miserables) {
         /*.on("click", onCellClick)*/
         .on("mouseover", onMouseOver)
         .on("mouseout", onMouseOut)
+        .on("click", onLinkClick)
         .append("title")
         .text(function(d) { return d.z; });
   }
 
+  //called when the mouse moves over a cell
   function onMouseOver(p) {
     d3.selectAll(".row text").classed("active", function(d, i) { return i == p.y; });
     d3.selectAll(".column text").classed("active", function(d, i) { return i == p.x; });
   }
 
+  //called when the mouse moves out of a cell
   function onMouseOut() {
     d3.selectAll("text").classed("active", false);
   }
-
-  /** (M) WORKING ON THIS */
-  function onTextClick(d, i){
-    var radius;
-
-    d3.selectAll("circle").filter(function(p){ return i == p.id; })
-      .style("r", function(){ console.log(this.r); console.log(this.r == 5); return 10; })
-  }
-
-  /** (M) WORKING ON THIS */
-  /*function onCellClick(d){
-    d3.selectAll("circle").filter(function(node){ return d.text == node.title; })
-      .style("r", 8);
-  }*/
-
-  //when the order dropdown value is changed, change the sort order
-  d3.select("#order").on("change", function() {
-    order(this.value);
-  });
-
-  //when the color dropdown value is changed, change the sort order
-  d3.select("#coloring").on("change", function() {
-    recolor(this.value);
-  });
 
   //function called to change the order of the axis
   function order(value) {
@@ -218,7 +259,58 @@ d3.json("miserables/les_miserables.json", function(miserables) {
         .attr("transform", function(d, i) { return "translate(" + x(i) + ")rotate(-90)"; });
   }
 
-  //function called to change the order of the axis
+
+  // GRAPH STARTS HERE --------------------------------------------------
+
+
+  var edge = svg2.append("g")
+      .attr("class", "links")
+    .selectAll("line")
+    .data(miserables.edges)
+    .enter().append("line")
+      .attr("stroke-width", function(d) { return 1/*Math.sqrt(d.value)*/; })
+    .on("click", onLinkClick);
+
+  var node = svg2.append("g")
+      .attr("class", "nodes")
+    .selectAll("circle")
+    .data(miserables.nodes)
+    .enter().append("circle")
+      .attr("r", 5)
+      .attr("fill", function(d) { return c(d.group); })
+      .on("click", onNodeClick)
+      .call(d3.drag()
+          .on("start", dragstarted)
+          .on("drag", dragged)
+          .on("end", dragended));
+
+  node.append("title")
+      .text(function(d) { return d.label; });
+
+  simulation
+      .nodes(miserables.nodes)
+      .on("tick", ticked);
+
+  simulation.force("link")
+      .links(miserables.edges);
+
+  function ticked() {
+    edge
+        .attr("x1", function(d) { return d.source.x; })
+        .attr("y1", function(d) { return d.source.y; })
+        .attr("x2", function(d) { return d.target.x; })
+        .attr("y2", function(d) { return d.target.y; });
+
+    node
+        .attr("cx", function(d) { return d.x; })
+        .attr("cy", function(d) { return d.y; });
+  }
+
+
+  // GENERAL FUNCTIONS HERE ---------------------------------------------
+
+
+  //function called to change the colors of the visualizations
   function recolor(value) {
     //change the scale
     c = colorScales[value];
@@ -252,49 +344,49 @@ d3.json("miserables/les_miserables.json", function(miserables) {
       }
     })
   }
-});
 
+  /** (M) WORKING ON THIS */
+  //called when a name is clicked
+  function onNodeClick(d, i){
+    console.log("node clicked");
+    console.log(d);
+    console.log(i);
+    var radius;
 
+    d3.selectAll("circle").filter(function(p){ return i == p.id; })
+      .style("r", function(){ console.log(this.r); console.log(this.r == 5); return 10; })
+  }
 
+  /** (M) WORKING ON THIS */
+  //called when a cell is clicked
+  function onLinkClick(d){
+    console.log("link clicked");
+    /*d3.selectAll("circle").filter(function(node){ return d.text == node.title; })
+      .style("r", 8);*/
+  } 
 
-// FORCE DIRECTED GRAPH STARTS HERE -------------------------------
+  function setFocusGraphNode(d, i){
 
-
-
-
-width2 = 740,
-height2 = 740;
-
-var svg2 = d3.select(".forcedirected").append("svg")
-    .attr("width", width2)
-    .attr("height", height2)   
-    .style("display", "block")
-    .style("margin", "auto");    
-
-//var color = d3.scaleOrdinal(d3.schemeCategory20);
-
-var simulation = d3.forceSimulation()
-    .force("link", d3.forceLink().id(function(d) { return d.id; }))
-    .force("charge", d3.forceManyBody().strength(-50))
-    .force("center", d3.forceCenter(width2 / 2, height2 / 2));
-
-d3.json("miserables/les_miserables.json", function(error, graph) {
-  if (error) throw error;
-
-  var edge = svg2.append("g")
+    //clear the svg
+    svg3.selectAll("*").remove();
+    
+    /* (R) WORKING ON THIS
+    var focusedge = svg3.append("g")
       .attr("class", "links")
     .selectAll("line")
-    .data(graph.edges)
+    .data(miserables.edges)
     .enter().append("line")
-      .attr("stroke-width", function(d) { return Math.sqrt(d.value); });
+      .attr("stroke-width", function(d) { return 1/*Math.sqrt(d.value)*//*; })
+    .on("click", onLinkClick);
 
   var node = svg2.append("g")
       .attr("class", "nodes")
     .selectAll("circle")
-    .data(graph.nodes)
+    .data(miserables.nodes)
     .enter().append("circle")
       .attr("r", 5)
       .attr("fill", function(d) { return c(d.group); })
+      .on("click", onNodeClick)
       .call(d3.drag()
           .on("start", dragstarted)
           .on("drag", dragged)
@@ -304,25 +396,18 @@ d3.json("miserables/les_miserables.json", function(error, graph) {
       .text(function(d) { return d.label; });
 
   simulation
-      .nodes(graph.nodes)
+      .nodes(miserables.nodes)
       .on("tick", ticked);
 
   simulation.force("link")
-      .links(graph.edges);
-
-  function ticked() {
-    edge
-        .attr("x1", function(d) { return d.source.x; })
-        .attr("y1", function(d) { return d.source.y; })
-        .attr("x2", function(d) { return d.target.x; })
-        .attr("y2", function(d) { return d.target.y; });
-
-    node
-        .attr("cx", function(d) { return d.x; })
-        .attr("cy", function(d) { return d.y; });
+      .links(miserables.edges);*/
   }
 
 });
+
+
+// FORCE DIRECTED GRAPH FUNCTIONS -------------------------------
+
 
 function dragstarted(d) {
   if (!d3.event.active) simulation.alphaTarget(0.3).restart();
