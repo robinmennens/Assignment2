@@ -3,8 +3,8 @@
 
 //set up the margins, width and height of the svg to be constructed
 var margin = {top: 100, right: 0, bottom: 0, left: 100},
-    width = 800,
-    height = 800;
+    width = 640,
+    height = 640;
 
 var colorScales = {
   none: d3.scaleOrdinal(["blue"]),
@@ -156,16 +156,44 @@ d3.json("miserables/les_miserables.json", function(miserables) {
         .text(function(d) { return d.z; });
   }
 
+  var lastNodesSelected = [];
   function onMouseOverCell(p) {
+    // show pointer if there is a relationship
+    d3.select(this).filter(function(){ return p.z; }).style("cursor", "pointer");
+
+    // highlight text on both row and column
+    d3.selectAll(".row text").classed("active", function(d, j) { return j == p.y; });
+    d3.selectAll(".column text").classed("active", function(d, j) { return j == p.x; });
+
+    // highlight both row and column
     d3.selectAll(".row").filter(function(d, j){ return p.y+1 == j; })
       .selectAll(".cell").filter(function(d, j){ return j != p.x; })
       .style("fill", "black");
     d3.selectAll(".row").filter(function(d, j){ return p.y+1 != j; })
       .selectAll(".cell").filter(function(d, j){return j == p.x;})
       .style("fill", "black");
-    d3.select(this).filter(function(){ return p.z; }).style("cursor", "pointer");
-    d3.selectAll(".row text").classed("active", function(d, j) { return j == p.y; });
-    d3.selectAll(".column text").classed("active", function(d, j) { return j == p.x; });
+
+    // if the cell is on the diagonal temporarily highlight a node in forcegraph
+    // otherwise highlight the two nodes of the corresponding edge
+    
+    if (p.x == p.y) {
+      onNodeClick(d3.selectAll("circle"), p.x);
+      lastNodesSelected[0] = p.x; }
+    else if (p.x != p.y && p.z > 0) { 
+      onEdgeClick(p.x, p.y);
+      lastNodesSelected[0] = p.x;
+      lastNodesSelected[1] = p.y; }
+    else if (p.z == 0 || p.z == null) {
+      if (lastNodesSelected[0] >= 0 && lastNodesSelected[1] >= 0) {
+        // it was an edge
+        onEdgeClick(lastNodesSelected[0], lastNodesSelected[1]); 
+      } else if (lastNodesSelected[0] >= 0) {
+        // it is a node
+        onNodeClick(d3.selectAll("circle"), lastNodesSelected[0]);
+      }
+      lastNodesSelected[0] = -1;
+      lastNodesSelected[1] = -1;
+    }
   }
 
   function onMouseOverText(p, i) {
@@ -338,7 +366,7 @@ function dragended(d) {
   d.fy = null;
 }
 
-function mouseOverForceGraph(){
+function mouseOverForceGraph(d, i){
   d3.select(this).style("cursor", "pointer");
 }
 
