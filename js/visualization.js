@@ -86,9 +86,9 @@ var svg3 = d3.select(".focusgraph").append("svg")
     .style("margin", "auto");    
 
 var simulation2 = d3.forceSimulation()
-    .force("link", d3.forceLink().id(function(d) { return d.id; }))
-    .force("charge", d3.forceManyBody().strength(-50))
-    .force("center", d3.forceCenter(width2 / 2, (height2 / 2)));
+    .force("links", d3.forceLink().id(function(d) { return d.id; }))
+    .force("charge2", d3.forceManyBody().strength(-50))
+    .force("center2", d3.forceCenter(width3 / 2, (height3 / 2)));
 
 
 // DATA INITIALIZATION ----------------------------------------------
@@ -370,7 +370,7 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
 
   //the default coloring
   recolor("group");
-  
+
   //function called to change the colors of the visualizations
   function recolor(value) {
     //change the scale
@@ -416,6 +416,8 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     d3.selectAll("circle").attr("r", 5);
     d3.selectAll("circle").filter(function(p){ return i == p.id; })
       .attr("r", function(){ return (r == 5) ? 15 : 5; });
+
+    setFocusGraphNode(i);
   }
 
   function onEdgeClick(x, y){
@@ -429,40 +431,111 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
       .attr("r", function(){ return (ry == 5) ? 15 : 5; });
   }
 
-  function setFocusGraphNode(d, i){
+  //var link2;
+  //var node2;
+
+  function setFocusGraphNode(i){
+    //only use i, d is different depending if text or a node was clicked    
+    console.log("setFocusGraphNode, i:" + i);
+    console.log(nodes[i]);
 
     //clear the svg
+    //simulation2.stop();
+    //simulation2.nodes([]);
     svg3.selectAll("*").remove();
+
+    //nodes and edges to be added to the focus graph
+    vertices = [];
+    connections = [];
+
+    console.log(miserables.edges);
+
+    for(connection in miserables.edges){      
+      //if one end of the edge is connected to i
+      if(miserables.edges[connection].source.id == i || miserables.edges[connection].target.id == i){
+        //add the edge to the edges
+        //connections.push({index: connection, source: {count: miserables.edges[connection].source.count, group: miserables.edges[connection].source.group, id: miserables.edges[connection].source.id, index: miserables.edges[connection].source.index, label: miserables.edges[connection].source.label}, target: {count: miserables.edges[connection].target.count, group: miserables.edges[connection].target.group, id: miserables.edges[connection].target.id, index: miserables.edges[connection].target.index, label: miserables.edges[connection].target.label}, value: miserables.edges[connection].value})
+        connections.push(jQuery.extend(true, {}, miserables.edges[connection]));
+        //if the endpoint is not i, add it to nodes
+        if(miserables.edges[connection].source.id != i){
+          //vertices.push({count: miserables.edges[connection].source.count, group: miserables.edges[connection].source.group, id: miserables.edges[connection].source.id, index: miserables.edges[connection].source.index, label: miserables.edges[connection].source.label});
+          vertices.push(jQuery.extend(true, {}, miserables.edges[connection].source));
+          console.log("source added:" + vertices[vertices.length - 1].id);
+        }
+        if(miserables.edges[connection].target.id != i){
+          //vertices.push({count: miserables.edges[connection].target.count, group: miserables.edges[connection].target.group, id: miserables.edges[connection].target.id, index: miserables.edges[connection].target.index, label: miserables.edges[connection].target.label});
+          vertices.push(jQuery.extend(true, {}, miserables.edges[connection].target));
+          console.log("target added:" + vertices[vertices.length - 1].id);
+        }
+      }
+    }
+
+    //and finally add the selected node to vertices
+    //vertices.push({count: nodes[i].count, group: nodes[i].group, id: nodes[i].id, index: nodes[i].index, label: nodes[i].label});
+    vertices.push(jQuery.extend(true, {}, nodes[i]));
+
+    console.log(vertices);
+    console.log(connections);
     
-    /* (R) WORKING ON THIS
-    var focusedge = svg3.append("g")
+    
+    link2 = svg3.append("g")
       .attr("class", "links")
     .selectAll("line")
-    .data(miserables.edges)
+    .data(connections)
     .enter().append("line")
-      .attr("stroke-width", function(d) { return 1/*Math.sqrt(d.value)*//*; })
-    .on("click", onLinkClick);
-  var node = svg2.append("g")
-      .attr("class", "nodes")
-    .selectAll("circle")
-    .data(miserables.nodes)
-    .enter().append("circle")
-      .attr("r", 5)
-      .attr("fill", function(d) { return c(d.group); })
-      .on("click", onNodeClick)
-      .call(d3.drag()
-          .on("start", dragstarted)
-          .on("drag", dragged)
-          .on("end", dragended));
-  node.append("title")
-      .text(function(d) { return d.label; });
-  simulation
-      .nodes(miserables.nodes)
-      .on("tick", ticked);
-  simulation.force("link")
-      .links(miserables.edges);*/
+      .attr("stroke-width", 1);
+
+    node2 = svg3.append("g")
+        .attr("class", "nodes")
+      .selectAll("circle")
+      .data(vertices)
+      .enter().append("circle")
+        .attr("r", 5)
+        .attr("fill", "black")
+        .call(d3.drag()
+            .on("start", dragstarted2)
+            .on("drag", dragged2)
+            .on("end", dragended2));
+
+    simulation2
+        .nodes(vertices)
+        .on("tick", ticked2);
+
+    simulation2.force("links")
+        .links(connections);
+
+    //simulation2.restart();
+  }
+
+  function ticked2() {
+    link2
+        .attr("x1", function(d) { return d.source.x; })
+        .attr("y1", function(d) { return d.source.y; })
+        .attr("x2", function(d) { return d.target.x; })
+        .attr("y2", function(d) { return d.target.y; });
+
+    node2
+        .attr("cx", function(d) { return d.x; })
+        .attr("cy", function(d) { return d.y; });
   }
 
 });
+
+function dragstarted2(d) {
+  if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+  d.fx = d.x;
+  d.fy = d.y;
+}
+
+function dragged2(d) {
+  d.fx = d3.event.x;
+  d.fy = d3.event.y;
+}
+
+function dragended2(d) {
+  if (!d3.event.active) simulation.alphaTarget(0);
+  d.fx = null;
+  d.fy = null;
+}
 
 
