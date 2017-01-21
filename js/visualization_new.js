@@ -1,4 +1,11 @@
-//GENERAL VARIABLES ---------------------------------
+// MATRIX STARTS HERE ------------------------------------------------
+
+
+//set up the margins, width and height of the svg to be constructed
+var margin = {top: 100, right: 0, bottom: 0, left: 100},
+    width = 640,
+    height = 640;
+
 var colorScales = {
   none: d3.scaleOrdinal(["blue"]),
   count: d3.scaleQuantize().domain([0, 159]).range([      
@@ -21,28 +28,13 @@ var colorScales = {
   group: d3.scaleOrdinal(d3.schemeCategory10)
 }
 
-//maps values to colors
-var c = colorScales["group"];
-
-// contains data about the relations between nodes
-var matrix = [];
-// contains data about the nodes themselves
-var nodes = [];
-
-
-// MATRIX VARIABLES ------------------------------------------------
-
-//set up the margins, width and height of the svg to be constructed
-var margin = {top: 100, right: 0, bottom: 0, left: 100},
-    width = 640,
-    height = 640;
-
 //x is a ordinal scale (text values) and it uses the width of the svg to map to
 //z is a scale that linearly maps the number of occurences of a "pair" to a value
+//c is a color scale: Constructs a new ordinal scale with a range of ten categorical colors:
 var x = d3.scaleBand().range([0, width]),
-    z = d3.scaleLinear().domain([0, 4]).clamp(true);
-    
-noColor = "#E8E6E5";  // (M) the color of the empty cells
+    z = d3.scaleLinear().domain([0, 4]).clamp(true),
+    c = colorScales["group"],
+    noColor = "#E8E6E5";  // (M) the color of the empty cells
 
 //select panel-body and add an svg to it
 var svg = d3.select(".matrix").append("svg")
@@ -54,53 +46,12 @@ var svg = d3.select(".matrix").append("svg")
   .append("g")
     .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
-
-// GRAPH VARIABLES --------------------------------------------------
-
-
-width2 = 740,
-height2 = 550;
-
-var svg2 = d3.select(".forcedirected").append("svg")
-    .attr("width", width2)
-    .attr("height", height2)   
-    .style("display", "block")
-    .style("margin", "auto");    
-
-var simulation = d3.forceSimulation()
-    .force("link", d3.forceLink().id(function(d) { return d.id; }))
-    .force("charge", d3.forceManyBody().strength(-50))
-    .force("center", d3.forceCenter(width2 / 2, (height2 / 2) + 35));
-
-
-// FOCUS GRAPH VARIABLES --------------------------------------------
-
-
-width3 = 740,
-height3 = 210;
-
-var svg3 = d3.select(".focusgraph").append("svg")
-    .attr("width", width3)
-    .attr("height", height3)   
-    .style("display", "block")
-    .style("margin", "auto");    
-
-var simulation2 = d3.forceSimulation()
-    .force("link", d3.forceLink().id(function(d) { return d.id; }))
-    .force("charge", d3.forceManyBody().strength(-50))
-    .force("center", d3.forceCenter(width2 / 2, (height2 / 2)));
-
-
-// DATA INITIALIZATION ----------------------------------------------
-
-
 //get the data
-d3.json("miserables/les_miserables.json", function(error, miserables) {
-  if (error) throw error
-
-  //set up matrix, array of nodes and total nr of nodes  
-  nodes = miserables.nodes,
-  n = nodes.length;
+d3.json("miserables/les_miserables.json", function(miserables) {
+  //set up matrix, array of nodes and total nr of nodes
+  var matrix = [],      
+      nodes = miserables.nodes,
+      n = nodes.length;
 
   // Compute index per node.
   nodes.forEach(function(node, i) {
@@ -137,19 +88,6 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     group: d3.range(n).sort(function(a, b) { return nodes[b].group - nodes[a].group; })
   };
 
-  //when the order dropdown value is changed, change the sort order
-  d3.select("#order").on("change", function() {
-    order(this.value);
-  });
-
-  //when the color dropdown value is changed, change the sort order
-  d3.select("#coloring").on("change", function() {
-    recolor(this.value);
-  });  
-
-  // MATRIX SETUP --------------------------------------------------
-
-
   // The default sort order.
   x.domain(orders.name);
 
@@ -185,8 +123,7 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
       .attr("class", "column")
       .attr("transform", function(d, i) { return "translate(" + x(i) + ")rotate(-90)"; });
 
-  column.append("line")
-      .attr("x1", -width);
+  column.append("line").attr("x1", -width);
 
   column.append("text")
       .attr("x", 6)
@@ -219,8 +156,7 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
         .text(function(d) { return d.z; });
   }
 
-  //called when the mouse moves over a cell
-  var lastNodesSelected = [];  
+  var lastNodesSelected = [];
   function onMouseOverCell(p) {
     // show pointer if there is a relationship
     d3.select(this).filter(function(){ return p.z; }).style("cursor", "pointer");
@@ -230,14 +166,12 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     d3.selectAll(".column text").classed("active", function(d, j) { return j == p.x; });
 
     // highlight both row and column
-    d3.selectAll(".row").filter(function(d, j){ return p.y+1 == j })
-      .selectAll(".cell").filter(function(d, j){ return j != p.x && d.z == 0; })     
-      .classed("activeCell", true);
-
-    //column  
-    d3.selectAll(".row").filter(function(d, j){ return p.y+1 != j })
-      .selectAll(".cell").filter(function(d, j){return j == p.x && d.z == 0;})
-      .classed("activeCell", true);
+    d3.selectAll(".row").filter(function(d, j){ return p.y+1 == j; })
+      .selectAll(".cell").filter(function(d, j){ return j != p.x; })
+      .style("fill", "black");
+    d3.selectAll(".row").filter(function(d, j){ return p.y+1 != j; })
+      .selectAll(".cell").filter(function(d, j){return j == p.x;})
+      .style("fill", "black");
 
     // if the cell is on the diagonal temporarily highlight a node in forcegraph
     // otherwise highlight the two nodes of the corresponding edge
@@ -269,13 +203,23 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
   }
 
   function onMouseOutCell() {
-    d3.selectAll(".cell").classed("activeCell", false);
+    recolor(coloring.value);
     d3.selectAll("text").classed("active", false);
   }
 
   function onCellClick(d){
     onEdgeClick(d.x, d.y);
   }
+
+  //when the order dropdown value is changed, change the sort order
+  d3.select("#order").on("change", function() {
+    order(this.value);
+  });
+
+  //when the color dropdown value is changed, change the sort order
+  d3.select("#coloring").on("change", function() {
+    recolor(this.value);
+  });
 
   //function called to change the order of the axis
   function order(value) {
@@ -296,82 +240,7 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
         .attr("transform", function(d, i) { return "translate(" + x(i) + ")rotate(-90)"; });
   }
 
-
-  // GRAPH STARTS HERE --------------------------------------------------
-
-
-  var edge = svg2.append("g")
-      .attr("class", "links")
-    .selectAll("line")
-    .data(miserables.edges)
-    .enter().append("line")
-      .attr("stroke-width", function(d) { return 1/*Math.sqrt(d.value)*/; })
-    .on("click", onEdgeClick);
-
-  var node = svg2.append("g")
-      .attr("class", "nodes")
-    .selectAll("circle")
-    .data(miserables.nodes)
-    .enter().append("circle")
-      .attr("r", 5)
-      .attr("fill", function(d) { return c(d.group); })
-      .on("click", onNodeClick)
-      .call(d3.drag()
-          .on("start", dragstarted)
-          .on("drag", dragged)
-          .on("end", dragended));
-
-  node.append("title")
-      .text(function(d) { return d.label; });
-
-  simulation
-      .nodes(miserables.nodes)
-      .on("tick", ticked);
-
-  simulation.force("link")
-      .links(miserables.edges);
-
-  
-
-  // FORCE DIRECTED GRAPH FUNCTIONS -------------------------------
-
-
-  function ticked() {
-    edge
-        .attr("x1", function(d) { return d.source.x; })
-        .attr("y1", function(d) { return d.source.y; })
-        .attr("x2", function(d) { return d.target.x; })
-        .attr("y2", function(d) { return d.target.y; });
-
-    node
-        .attr("cx", function(d) { return d.x; })
-        .attr("cy", function(d) { return d.y; });
-  }
-
-  function dragstarted(d) {
-    if (!d3.event.active) simulation.alphaTarget(0.3).restart();
-    d.fx = d.x;
-    d.fy = d.y;
-  }
-
-  function dragged(d) {
-    d.fx = d3.event.x;
-    d.fy = d3.event.y;
-  }
-
-  function dragended(d) {
-    if (!d3.event.active) simulation.alphaTarget(0);
-    d.fx = null;
-    d.fy = null;
-  }
-
-
-  // GENERAL FUNCTIONS HERE ---------------------------------------------
-
-  //the default coloring
-  recolor("group");
-  
-  //function called to change the colors of the visualizations
+  //function called to change the order of the axis
   function recolor(value) {
     //change the scale
     c = colorScales[value];
@@ -405,64 +274,117 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
       }
     })
   }
+});
 
-  function mouseOverForceGraph(d, i){
-    d3.select(this).style("cursor", "pointer");
-  }
 
-  function onNodeClick(d, i){
-    var r = d3.selectAll("circle").filter(function(p){ return i == p.id; }).attr("r");
-    // if a circle has been clicked then shrink all the circles and then select the correct one
-    d3.selectAll("circle").attr("r", 5);
-    d3.selectAll("circle").filter(function(p){ return i == p.id; })
-      .attr("r", function(){ return (r == 5) ? 15 : 5; });
-  }
 
-  function onEdgeClick(x, y){
-    var rx = d3.selectAll("circle").filter(function(p){ return x == p.id; }).attr("r");
-    var ry = d3.selectAll("circle").filter(function(p){ return y == p.id; }).attr("r");
-    // if a circle has been clicked then shrink all the circles and then select the correct one
-    d3.selectAll("circle").attr("r", 5);
-    d3.selectAll("circle").filter(function(p){ return x == p.id; })
-      .attr("r", function(){ return (rx == 5) ? 15 : 5; });
-    d3.selectAll("circle").filter(function(p){ return y == p.id; })
-      .attr("r", function(){ return (ry == 5) ? 15 : 5; });
-  }
 
-  function setFocusGraphNode(d, i){
+// FORCE DIRECTED GRAPH STARTS HERE -------------------------------
 
-    //clear the svg
-    svg3.selectAll("*").remove();
-    
-    /* (R) WORKING ON THIS
-    var focusedge = svg3.append("g")
+
+
+
+width2 = 740,
+height2 = 740;
+
+var svg2 = d3.select(".forcedirected").append("svg")
+    .attr("width", width2)
+    .attr("height", height2)   
+    .style("display", "block")
+    .style("margin", "auto");    
+
+//var color = d3.scaleOrdinal(d3.schemeCategory20);
+
+var simulation = d3.forceSimulation()
+    .force("link", d3.forceLink().id(function(d) { return d.id; }))
+    .force("charge", d3.forceManyBody().strength(-50))
+    .force("center", d3.forceCenter(width2 / 2, height2 / 2));
+
+d3.json("miserables/les_miserables.json", function(error, graph) {
+  if (error) throw error;
+
+  var edge = svg2.append("g")
       .attr("class", "links")
     .selectAll("line")
-    .data(miserables.edges)
+    .data(graph.edges)
     .enter().append("line")
-      .attr("stroke-width", function(d) { return 1/*Math.sqrt(d.value)*//*; })
-    .on("click", onLinkClick);
+      .attr("stroke-width", function(d) { return Math.sqrt(d.value); })
+      .on("mouseover", mouseOverForceGraph);
+
   var node = svg2.append("g")
       .attr("class", "nodes")
     .selectAll("circle")
-    .data(miserables.nodes)
+    .data(graph.nodes)
     .enter().append("circle")
       .attr("r", 5)
       .attr("fill", function(d) { return c(d.group); })
-      .on("click", onNodeClick)
       .call(d3.drag()
           .on("start", dragstarted)
           .on("drag", dragged)
-          .on("end", dragended));
+          .on("end", dragended))
+      .on("click", onNodeClick)
+      .on("mouseover", mouseOverForceGraph);
+
   node.append("title")
       .text(function(d) { return d.label; });
+
   simulation
-      .nodes(miserables.nodes)
+      .nodes(graph.nodes)
       .on("tick", ticked);
+
   simulation.force("link")
-      .links(miserables.edges);*/
+      .links(graph.edges);
+
+  function ticked() {
+    edge
+        .attr("x1", function(d) { return d.source.x; })
+        .attr("y1", function(d) { return d.source.y; })
+        .attr("x2", function(d) { return d.target.x; })
+        .attr("y2", function(d) { return d.target.y; });
+
+    node
+        .attr("cx", function(d) { return d.x; })
+        .attr("cy", function(d) { return d.y; });
   }
 
 });
 
+function dragstarted(d) {
+  if (!d3.event.active) simulation.alphaTarget(0.3).restart();
+  d.fx = d.x;
+  d.fy = d.y;
+}
 
+function dragged(d) {
+  d.fx = d3.event.x;
+  d.fy = d3.event.y;
+}
+
+function dragended(d) {
+  if (!d3.event.active) simulation.alphaTarget(0);
+  d.fx = null;
+  d.fy = null;
+}
+
+function mouseOverForceGraph(d, i){
+  d3.select(this).style("cursor", "pointer");
+}
+
+function onNodeClick(d, i){
+  var r = d3.selectAll("circle").filter(function(p){ return i == p.id; }).attr("r");
+  // if a circle has been clicked then shrink all the circles and then select the correct one
+  d3.selectAll("circle").attr("r", 5);
+  d3.selectAll("circle").filter(function(p){ return i == p.id; })
+    .attr("r", function(){ return (r == 5) ? 15 : 5; });
+}
+
+function onEdgeClick(x, y){
+  var rx = d3.selectAll("circle").filter(function(p){ return x == p.id; }).attr("r");
+  var ry = d3.selectAll("circle").filter(function(p){ return y == p.id; }).attr("r");
+  // if a circle has been clicked then shrink all the circles and then select the correct one
+  d3.selectAll("circle").attr("r", 5);
+  d3.selectAll("circle").filter(function(p){ return x == p.id; })
+    .attr("r", function(){ return (rx == 5) ? 15 : 5; });
+  d3.selectAll("circle").filter(function(p){ return y == p.id; })
+    .attr("r", function(){ return (ry == 5) ? 15 : 5; });
+}
