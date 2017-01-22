@@ -85,11 +85,6 @@ var svg3 = d3.select(".focusgraph").append("svg")
     .style("display", "block")
     .style("margin", "auto");    
 
-var simulation2 = d3.forceSimulation()
-    .force("links", d3.forceLink().id(function(d) { return d.id; }))
-    .force("charge2", d3.forceManyBody().strength(-50))
-    .force("center2", d3.forceCenter(width3 / 2, (height3 / 2)));
-
 
 // DATA INITIALIZATION ----------------------------------------------
 
@@ -431,8 +426,8 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
       .attr("r", function(){ return (ry == 5) ? 15 : 5; });
   }
 
-  //var link2;
-  //var node2;
+  var link2;
+  var node2;
 
   function setFocusGraphNode(i){
     //only use i, d is different depending if text or a node was clicked    
@@ -444,38 +439,67 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     //simulation2.nodes([]);
     svg3.selectAll("*").remove();
 
+    var simulation2 = d3.forceSimulation()
+    .force("link", d3.forceLink().id(function(d) { return d.id; }))
+    .force("charge2", d3.forceManyBody().strength(-50))
+    .force("center2", d3.forceCenter(width3 / 2, (height3 / 2)));
+
     //nodes and edges to be added to the focus graph
     vertices = [];
     connections = [];
 
     console.log(miserables.edges);
 
+    var added = false;
+
     for(connection in miserables.edges){      
       //if one end of the edge is connected to i
       if(miserables.edges[connection].source.id == i || miserables.edges[connection].target.id == i){
+        var source = {count: miserables.edges[connection].source.count, group: miserables.edges[connection].source.group, id: miserables.edges[connection].source.id, label: miserables.edges[connection].source.label};
+        var target = {count: miserables.edges[connection].target.count, group: miserables.edges[connection].target.group, id: miserables.edges[connection].target.id, label: miserables.edges[connection].target.label};
+        
+        console.log("source:" + JSON.stringify(source, null, 4));
+        //console.log("source index:" + source.index);
+        console.log("target:" + JSON.stringify(target, null, 4));
+        //console.log("target index:" + target.index);
+
         //add the edge to the edges
-        //connections.push({index: connection, source: {count: miserables.edges[connection].source.count, group: miserables.edges[connection].source.group, id: miserables.edges[connection].source.id, index: miserables.edges[connection].source.index, label: miserables.edges[connection].source.label}, target: {count: miserables.edges[connection].target.count, group: miserables.edges[connection].target.group, id: miserables.edges[connection].target.id, index: miserables.edges[connection].target.index, label: miserables.edges[connection].target.label}, value: miserables.edges[connection].value})
-        connections.push(jQuery.extend(true, {}, miserables.edges[connection]));
+        connections.push({index: connection, source: source.id, target: target.id, value: miserables.edges[connection].value})
+        //connections.push(jQuery.extend(true, {}, miserables.edges[connection]));
         //if the endpoint is not i, add it to nodes
         if(miserables.edges[connection].source.id != i){
-          //vertices.push({count: miserables.edges[connection].source.count, group: miserables.edges[connection].source.group, id: miserables.edges[connection].source.id, index: miserables.edges[connection].source.index, label: miserables.edges[connection].source.label});
-          vertices.push(jQuery.extend(true, {}, miserables.edges[connection].source));
+          vertices.push(source);
+          //vertices.push(jQuery.extend(true, {}, miserables.edges[connection].source));
           console.log("source added:" + vertices[vertices.length - 1].id);
+        } else {
+          //the target is the clicked node
+          if(!added){
+            vertices.push(source);
+            added = true;
+          }
         }
         if(miserables.edges[connection].target.id != i){
-          //vertices.push({count: miserables.edges[connection].target.count, group: miserables.edges[connection].target.group, id: miserables.edges[connection].target.id, index: miserables.edges[connection].target.index, label: miserables.edges[connection].target.label});
-          vertices.push(jQuery.extend(true, {}, miserables.edges[connection].target));
+          vertices.push(target);
+          //vertices.push(jQuery.extend(true, {}, miserables.edges[connection].target));
           console.log("target added:" + vertices[vertices.length - 1].id);
+        } else {
+          //the target is the clicked node
+          if(!added){
+            vertices.push(target);
+            added = true;
+          }
         }
+        console.log("vertices" + JSON.stringify(vertices, null, 4));
+        console.log("connections" + JSON.stringify(connections, null, 4));
       }
+
     }
 
     //and finally add the selected node to vertices
     //vertices.push({count: nodes[i].count, group: nodes[i].group, id: nodes[i].id, index: nodes[i].index, label: nodes[i].label});
-    vertices.push(jQuery.extend(true, {}, nodes[i]));
+    //vertices.push(jQuery.extend(true, {}, nodes[i]));
 
-    console.log(vertices);
-    console.log(connections);
+    
     
     
     link2 = svg3.append("g")
@@ -497,19 +521,31 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
             .on("drag", dragged2)
             .on("end", dragended2));
 
+    console.log("after vars");
+    console.log("vertices" + JSON.stringify(vertices, null, 4));
+        console.log("connections" + JSON.stringify(connections, null, 4));
+
     simulation2
         .nodes(vertices)
         .on("tick", ticked2);
 
-    simulation2.force("links")
+    console.log("after node init");
+    console.log("vertices" + JSON.stringify(vertices, null, 4));
+        console.log("connections" + JSON.stringify(connections, null, 4));
+
+    simulation2.force("link")
         .links(connections);
+
+    console.log("after link init");
+    console.log("vertices" + JSON.stringify(vertices, null, 4));
+    console.log("connections" + JSON.stringify(connections, null, 4));
 
     //simulation2.restart();
   }
 
-  function ticked2() {
+  function ticked2() {      
     link2
-        .attr("x1", function(d) { return d.source.x; })
+        .attr("x1", function(d) { /*console.log(JSON.stringify(d, null, 4));*/ return d.source.x; })
         .attr("y1", function(d) { return d.source.y; })
         .attr("x2", function(d) { return d.target.x; })
         .attr("y2", function(d) { return d.target.y; });
