@@ -206,8 +206,6 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
         .attr("width", x.bandwidth())
         .attr("height", x.bandwidth())
         .style("fill-opacity", 1)
-        //color the rectangle based on cluster.. check if the endpoints of the pair belong to the same cluster
-        // (M) this changed!!!
         .style("fill", recolor(coloring.value))
         .on("click", onCellClick)
         .on("mouseover", onMouseOverCell)
@@ -227,18 +225,10 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     d3.selectAll(".column text").classed("active", function(d, j) { return j == p.x; });
 
     // highlight both row and column
-    d3.selectAll(".row").filter(function(d, j){ return p.y+1 == j })
-      .selectAll(".cell").filter(function(d, j){ return j != p.x && d.z == 0; })     
-      .classed("activeCell", true);
-
-    //column  
-    d3.selectAll(".row").filter(function(d, j){ return p.y+1 != j })
-      .selectAll(".cell").filter(function(d, j){return j == p.x && d.z == 0;})
-      .classed("activeCell", true);
+    highlightCell(p.x, p.y, true);
 
     // if the cell is on the diagonal temporarily highlight a node in forcegraph
     // otherwise highlight the two nodes of the corresponding edge
-    
     if (p.x == p.y) {
       onNodeClick(d3.selectAll("circle"), p.x);
       lastNodesSelected[0] = p.x; }
@@ -265,13 +255,13 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     d3.selectAll(".column text").classed("active", function(d, j) { return i == j; }).style("cursor", "pointer");
   }
 
-  function onMouseOutCell() {
+  function onMouseOutCell(d, i) {
     d3.selectAll(".cell").classed("activeCell", false);
     d3.selectAll("text").classed("active", false);
   }
 
   function onCellClick(d){
-    onEdgeClick(d.x, d.y);
+    if (d.z > 0) { onEdgeClick(d.x, d.y); }
   }
 
   //function called to change the order of the axis
@@ -303,7 +293,9 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     .data(miserables.edges)
     .enter().append("line")
       .attr("stroke-width", function(d) { return 1/*Math.sqrt(d.value)*/; })
-    .on("click", onEdgeClick);
+    .on("click", onEdgeClick)
+    .on("mouseover", mouseOverForceGraph)
+    .on("mouseout", mouseOutForceGraph);
 
   var node = svg2.append("g")
       .attr("class", "nodes")
@@ -313,25 +305,24 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
       .attr("r", 5)
       .attr("fill", function(d) { return c(d.group); })
       .on("click", onNodeClick)
-      .call(d3.drag()
-          .on("start", dragstarted)
-          .on("drag", dragged)
-          .on("end", dragended));
+      .on("mouseover", mouseOverForceGraph)
+      .on("mouseout", mouseOutForceGraph)
+      .call(d3.drag().on("start", dragstarted)
+                     .on("drag", dragged)
+                     .on("end", dragended));
 
   node.append("title")
-      .text(function(d) { return d.label; });
+    .text(function(d) { return d.label; });
 
   simulation
-      .nodes(miserables.nodes)
-      .on("tick", ticked);
+    .nodes(miserables.nodes)
+    .on("tick", ticked);
 
-  simulation.force("link")
-      .links(miserables.edges);
-
-  
+  simulation
+    .force("link")
+    .links(miserables.edges);
 
   // FORCE DIRECTED GRAPH FUNCTIONS -------------------------------
-
 
   function ticked() {
     edge
@@ -407,8 +398,21 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     recolorfg();
   }
 
+  function highlightCell(x, y, isActive){
+    d3.selectAll(".row").filter(function(d, j){ return y+1 == j })
+      .selectAll(".cell").filter(function(d, j){ return j != x && d.z == 0; }).classed("activeCell", isActive); 
+       
+    d3.selectAll(".row").filter(function(d, j){ return y+1 != j })
+      .selectAll(".cell").filter(function(d, j){return j == x && d.z == 0;}).classed("activeCell", isActive);
+  }
+
   function mouseOverForceGraph(d, i){
     d3.select(this).style("cursor", "pointer");
+    highlightCell(i, i, true);
+  }
+
+  function mouseOutForceGraph(d, i){
+    highlightCell(i, i, false);
   }
 
   function onNodeClick(d, i){
