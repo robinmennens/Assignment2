@@ -1,6 +1,6 @@
 //GENERAL VARIABLES ---------------------------------
 var colorScales = {
-  none: d3.scaleOrdinal(["blue"]),
+  none: d3.scaleOrdinal(["darkcyan"]),
   count: d3.scaleQuantize().domain([0, 159]).range([      
     d3.rgb(170, 225, 0),
     d3.rgb(191, 225, 0),
