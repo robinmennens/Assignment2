@@ -21,8 +21,10 @@ var colorScales = {
   group: d3.scaleOrdinal(d3.schemeCategory10)
 }
 
+var currentColorScale = "group";
+
 //maps values to colors
-var c = colorScales["group"];
+var c = colorScales[currentColorScale];
 
 // contains data about the relations between nodes
 var matrix = [];
@@ -59,7 +61,7 @@ var svg = d3.select(".matrix").append("svg")
 
 
 width2 = 740,
-height2 = 550;
+height2 = 460;
 
 var svg2 = d3.select(".forcedirected").append("svg")
     .attr("width", width2)
@@ -69,7 +71,7 @@ var svg2 = d3.select(".forcedirected").append("svg")
 
 var simulation = d3.forceSimulation()
     .force("link", d3.forceLink().id(function(d) { return d.id; }))
-    .force("charge", d3.forceManyBody().strength(-50))
+    .force("charge", d3.forceManyBody().strength(-35))
     .force("center", d3.forceCenter(width2 / 2, (height2 / 2) + 35));
 
 
@@ -77,7 +79,7 @@ var simulation = d3.forceSimulation()
 
 
 width3 = 740,
-height3 = 210;
+height3 = 300;
 
 var svg3 = d3.select(".focusgraph").append("svg")
     .attr("width", width3)
@@ -364,12 +366,13 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
   // GENERAL FUNCTIONS HERE ---------------------------------------------
 
   //the default coloring
-  recolor("group");
+  recolor(currentColorScale);
 
   //function called to change the colors of the visualizations
   function recolor(value) {
     //change the scale
     c = colorScales[value];
+    currentColorScale = value;
 
     d3.selectAll(".cell")
     .style("fill", function(d) {
@@ -391,7 +394,7 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     })
 
     //update the graph
-    d3.selectAll("circle")
+    svg2.selectAll("circle")
     .attr("fill", function(d, i) {
       if(value == "count"){
         return c(nodes[i].count) 
@@ -399,6 +402,9 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
         return c(nodes[i].group); 
       }
     })
+
+    //also recolor the focus graph
+    recolorfg();
   }
 
   function mouseOverForceGraph(d, i){
@@ -426,29 +432,30 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
       .attr("r", function(){ return (ry == 5) ? 15 : 5; });
   }
 
+
+  // FOCUS GRAPH FUNCTIONS HERE -------------------------------------
+
+
   var link2;
   var node2;
 
+  //nodes and edges to be added to the focus graph
+  
+
   function setFocusGraphNode(i){
     //only use i, d is different depending if text or a node was clicked    
-    console.log("setFocusGraphNode, i:" + i);
-    console.log(nodes[i]);
+    //console.log("setFocusGraphNode, i:" + i);
+    //console.log(nodes[i]);
 
     //clear the svg
-    //simulation2.stop();
-    //simulation2.nodes([]);
     svg3.selectAll("*").remove();
 
     var simulation2 = d3.forceSimulation()
     .force("link", d3.forceLink().id(function(d) { return d.id; }))
-    .force("charge2", d3.forceManyBody().strength(-50))
-    .force("center2", d3.forceCenter(width3 / 2, (height3 / 2)));
+    .force("charge2", d3.forceManyBody().strength(-700));
 
-    //nodes and edges to be added to the focus graph
     vertices = [];
     connections = [];
-
-    console.log(miserables.edges);
 
     var added = false;
 
@@ -458,9 +465,9 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
         var source = {count: miserables.edges[connection].source.count, group: miserables.edges[connection].source.group, id: miserables.edges[connection].source.id, label: miserables.edges[connection].source.label};
         var target = {count: miserables.edges[connection].target.count, group: miserables.edges[connection].target.group, id: miserables.edges[connection].target.id, label: miserables.edges[connection].target.label};
         
-        console.log("source:" + JSON.stringify(source, null, 4));
+        //console.log("source:" + JSON.stringify(source, null, 4));
         //console.log("source index:" + source.index);
-        console.log("target:" + JSON.stringify(target, null, 4));
+        //console.log("target:" + JSON.stringify(target, null, 4));
         //console.log("target index:" + target.index);
 
         //add the edge to the edges
@@ -472,8 +479,10 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
           //vertices.push(jQuery.extend(true, {}, miserables.edges[connection].source));
           console.log("source added:" + vertices[vertices.length - 1].id);
         } else {
-          //the target is the clicked node
+          //the source is the clicked node, we add it only once
           if(!added){
+            source.fx =  width3 / 2;
+            source.fy = height3 / 2;
             vertices.push(source);
             added = true;
           }
@@ -483,25 +492,27 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
           //vertices.push(jQuery.extend(true, {}, miserables.edges[connection].target));
           console.log("target added:" + vertices[vertices.length - 1].id);
         } else {
-          //the target is the clicked node
+          //the target is the clicked node, we add it only once
           if(!added){
+            target.fx =  width3 / 2;
+            target.fy = height3 / 2;
             vertices.push(target);
             added = true;
           }
         }
-        console.log("vertices" + JSON.stringify(vertices, null, 4));
-        console.log("connections" + JSON.stringify(connections, null, 4));
+        //console.log("vertices" + JSON.stringify(vertices, null, 4));
+        //console.log("connections" + JSON.stringify(connections, null, 4));
       }
 
     }
 
-    //and finally add the selected node to vertices
-    //vertices.push({count: nodes[i].count, group: nodes[i].group, id: nodes[i].id, index: nodes[i].index, label: nodes[i].label});
-    //vertices.push(jQuery.extend(true, {}, nodes[i]));
+    //only when we have many vertices we apply forces to the right and left
+    if(vertices.length > 5){
+      simulation2
+      .force("right", d3.forceX(width3 * 0.75).strength(-0.27))
+      .force("left", d3.forceX(width3 * 0.25).strength(-0.27));
+    }
 
-    
-    
-    
     link2 = svg3.append("g")
       .attr("class", "links")
     .selectAll("line")
@@ -513,65 +524,63 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
         .attr("class", "nodes")
       .selectAll("circle")
       .data(vertices)
-      .enter().append("circle")
-        .attr("r", 5)
-        .attr("fill", "black")
-        .call(d3.drag()
-            .on("start", dragstarted2)
-            .on("drag", dragged2)
-            .on("end", dragended2));
+      .enter().append("g");
 
-    console.log("after vars");
-    console.log("vertices" + JSON.stringify(vertices, null, 4));
-        console.log("connections" + JSON.stringify(connections, null, 4));
+    node2.append("circle")
+      .attr("r", 5)
+      .attr("fill", "black")
+      .attr("group", function(d) {return d.group;})
+      .attr("count", function(d) {return d.count;});
+
+    node2.append("text")
+        .attr("dx", 12)
+        .attr("dy", ".35em")
+        .text(function(d) {return d.label});  
+
+    // console.log("after vars");
+    // console.log("vertices" + JSON.stringify(vertices, null, 4));
+    //     console.log("connections" + JSON.stringify(connections, null, 4));
 
     simulation2
         .nodes(vertices)
         .on("tick", ticked2);
 
-    console.log("after node init");
-    console.log("vertices" + JSON.stringify(vertices, null, 4));
-        console.log("connections" + JSON.stringify(connections, null, 4));
+    // console.log("after node init");
+    // console.log("vertices" + JSON.stringify(vertices, null, 4));
+    //     console.log("connections" + JSON.stringify(connections, null, 4));
 
     simulation2.force("link")
         .links(connections);
 
-    console.log("after link init");
-    console.log("vertices" + JSON.stringify(vertices, null, 4));
-    console.log("connections" + JSON.stringify(connections, null, 4));
+    // console.log("after link init");
+    // console.log("vertices" + JSON.stringify(vertices, null, 4));
+    // console.log("connections" + JSON.stringify(connections, null, 4));
+    recolorfg();
+  }
 
-    //simulation2.restart();
+  //recolors the fg, we do this separate because it needs to happen more often
+  function recolorfg(){
+    svg3.selectAll("circle")
+      .attr("fill", function(d) { return (currentColorScale == "group") ?  c(d.group) : c(d.count); })
   }
 
   function ticked2() {      
     link2
-        .attr("x1", function(d) { /*console.log(JSON.stringify(d, null, 4));*/ return d.source.x; })
+        .attr("x1", function(d) { return d.source.x; })
         .attr("y1", function(d) { return d.source.y; })
         .attr("x2", function(d) { return d.target.x; })
         .attr("y2", function(d) { return d.target.y; });
 
     node2
+        .select("circle")
         .attr("cx", function(d) { return d.x; })
         .attr("cy", function(d) { return d.y; });
+
+    node2
+        .select("text")
+        .attr("x", function(d) { return d.x; })
+        .attr("y", function(d) { return d.y; });
   }
 
 });
-
-function dragstarted2(d) {
-  if (!d3.event.active) simulation.alphaTarget(0.3).restart();
-  d.fx = d.x;
-  d.fy = d.y;
-}
-
-function dragged2(d) {
-  d.fx = d3.event.x;
-  d.fy = d3.event.y;
-}
-
-function dragended2(d) {
-  if (!d3.event.active) simulation.alphaTarget(0);
-  d.fx = null;
-  d.fy = null;
-}
-
 
