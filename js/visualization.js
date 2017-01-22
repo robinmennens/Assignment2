@@ -85,7 +85,18 @@ var svg3 = d3.select(".focusgraph").append("svg")
     .attr("width", width3)
     .attr("height", height3)   
     .style("display", "block")
-    .style("margin", "auto");    
+    .style("margin", "auto");
+
+// SCALE VARIABLES --------------------------------------------------
+
+width4 = 400,
+height4 = 20;
+
+var svg4 = d3.select(".scale").append("svg")
+.attr("width", width4)
+.attr("height", height4)   
+.style("display", "block")
+.style("margin", "auto");
 
 
 // DATA INITIALIZATION ----------------------------------------------
@@ -142,6 +153,11 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
   //when the color dropdown value is changed, change the sort order
   d3.select("#coloring").on("change", function() {
     recolor(this.value);
+    if(this.value == "count") {
+      showScale();
+    } else {
+      hideScale();
+    }
   });  
 
   // MATRIX SETUP --------------------------------------------------
@@ -321,6 +337,41 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
   simulation
     .force("link")
     .links(miserables.edges);
+
+
+  // SCALE STARTS HERE --------------------------------------------
+
+
+  function showScale(){
+    for(i = 1; i < 159; i++){
+      svg4.append("rect")
+      .attr("width", 2)
+      .attr("height", height4 - 2)
+      .attr("x", (2 * i) + 17)
+      .attr("y", 1)
+      .attr("fill", c(i))
+      .append("title")
+      .text(i);
+    }
+
+    svg4.append("text")
+      .attr("y", 15) 
+      .attr("x", 8)  
+      .classed("scaleText", true)   
+      .text("0");
+
+    svg4.append("text")
+      .attr("y", 15)
+      .attr("x", 336)
+      .classed("scaleText", true)  
+      .text("158");
+
+  }
+
+  function hideScale(){
+    svg4.selectAll("*").remove();
+  }
+
 
   // FORCE DIRECTED GRAPH FUNCTIONS -------------------------------
 
