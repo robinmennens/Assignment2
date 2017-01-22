@@ -418,8 +418,8 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
   function onNodeClick(d, i){
     var r = d3.selectAll("circle").filter(function(p){ return i == p.id; }).attr("r");
     // if a circle has been clicked then shrink all the circles and then select the correct one
-    d3.selectAll("circle").attr("r", 5);
-    d3.selectAll("circle").filter(function(p){ return i == p.id; })
+    svg2.selectAll("circle").attr("r", 5);
+    svg2.selectAll("circle").filter(function(p){ return i == p.id; })
       .attr("r", function(){ return (r == 5) ? 15 : 5; });
 
     setFocusGraphNode(i);
@@ -429,10 +429,10 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     var rx = d3.selectAll("circle").filter(function(p){ return x == p.id; }).attr("r");
     var ry = d3.selectAll("circle").filter(function(p){ return y == p.id; }).attr("r");
     // if a circle has been clicked then shrink all the circles and then select the correct one
-    d3.selectAll("circle").attr("r", 5);
-    d3.selectAll("circle").filter(function(p){ return x == p.id; })
+    svg2.selectAll("circle").attr("r", 5);
+    svg2.selectAll("circle").filter(function(p){ return x == p.id; })
       .attr("r", function(){ return (rx == 5) ? 15 : 5; });
-    d3.selectAll("circle").filter(function(p){ return y == p.id; })
+    svg2.selectAll("circle").filter(function(p){ return y == p.id; })
       .attr("r", function(){ return (ry == 5) ? 15 : 5; });
   }
 
@@ -442,14 +442,10 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
 
   var link2;
   var node2;
-
-  //nodes and edges to be added to the focus graph
-  
+  var linklabels;
 
   function setFocusGraphNode(i){
     //only use i, d is different depending if text or a node was clicked    
-    //console.log("setFocusGraphNode, i:" + i);
-    //console.log(nodes[i]);
 
     //clear the svg
     svg3.selectAll("*").remove();
@@ -468,16 +464,12 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
       if(miserables.edges[connection].source.id == i || miserables.edges[connection].target.id == i){
         var source = {count: miserables.edges[connection].source.count, group: miserables.edges[connection].source.group, id: miserables.edges[connection].source.id, label: miserables.edges[connection].source.label};
         var target = {count: miserables.edges[connection].target.count, group: miserables.edges[connection].target.group, id: miserables.edges[connection].target.id, label: miserables.edges[connection].target.label};
-        
-        //console.log("source:" + JSON.stringify(source, null, 4));
-        //console.log("source index:" + source.index);
-        //console.log("target:" + JSON.stringify(target, null, 4));
-        //console.log("target index:" + target.index);
 
         //add the edge to the edges
         connections.push({index: connection, source: source.id, target: target.id, value: miserables.edges[connection].value})
         //connections.push(jQuery.extend(true, {}, miserables.edges[connection]));
         //if the endpoint is not i, add it to nodes
+
         if(miserables.edges[connection].source.id != i){
           vertices.push(source);
           //vertices.push(jQuery.extend(true, {}, miserables.edges[connection].source));
@@ -491,6 +483,7 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
             added = true;
           }
         }
+
         if(miserables.edges[connection].target.id != i){
           vertices.push(target);
           //vertices.push(jQuery.extend(true, {}, miserables.edges[connection].target));
@@ -503,11 +496,8 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
             vertices.push(target);
             added = true;
           }
-        }
-        //console.log("vertices" + JSON.stringify(vertices, null, 4));
-        //console.log("connections" + JSON.stringify(connections, null, 4));
+        }        
       }
-
     }
 
     //only when we have many vertices we apply forces to the right and left
@@ -517,48 +507,72 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
       .force("left", d3.forceX(width3 * 0.25).strength(-0.27));
     }
 
+    //make a group for all links and a group for each link
     link2 = svg3.append("g")
       .attr("class", "links")
     .selectAll("line")
     .data(connections)
-    .enter().append("line")
-      .attr("stroke-width", 1);
+    .enter().append("g")
+    .attr("source", function(d) { return d.source; } )
+    .attr("target", function(d) { return d.target; } );
 
+    //add lines to every group
+    link2.append("line")
+      .attr("stroke-width", 1);  
+
+    //add a group for the nodes and a group for every node
     node2 = svg3.append("g")
         .attr("class", "nodes")
       .selectAll("circle")
       .data(vertices)
-      .enter().append("g");
+      .enter().append("g")
+      .attr("class", "node")
+      .attr("id", function(d) { return d.id; } );
 
+    //add circles to the node groups
     node2.append("circle")
-      .attr("r", 5)
+      .attr("r", 10)
       .attr("fill", "black")
       .attr("group", function(d) {return d.group;})
-      .attr("count", function(d) {return d.count;});
+      .attr("count", function(d) {return d.count;})
+      .on("mouseover", showValue)
+      .on("mouseout", hideValue);
 
+    //add node labels (names)
     node2.append("text")
         .attr("dx", 12)
         .attr("dy", ".35em")
-        .text(function(d) {return d.label});  
+        .text(function(d) {return d.label});
 
-    // console.log("after vars");
-    // console.log("vertices" + JSON.stringify(vertices, null, 4));
-    //     console.log("connections" + JSON.stringify(connections, null, 4));
+    //add node labels (values)
+    node2.append("text")        
+        .attr("text-anchor", "middle")        
+        .attr("dy", ".35em")
+        .attr("pointer-events", "none")
+        .classed("nodecount", true)
+        .text(function(d) {return d.count});
+
+    //add this as the last because it should always be drawn on top    
+    linklabels = svg3.append("g")
+        .attr("class", "linklabels")
+        .selectAll("text")
+        .data(connections)
+        .enter().append("text")
+      .attr("text-anchor", "middle")                
+        .classed("edgecount", true)
+        .classed("link", true)
+        .attr("source", function(d) { return d.source; } )
+        .attr("target", function(d) { return d.target; } )
+        .style("opacity", 0)        
+        .text(function(d) {return d.value});    
 
     simulation2
         .nodes(vertices)
         .on("tick", ticked2);
 
-    // console.log("after node init");
-    // console.log("vertices" + JSON.stringify(vertices, null, 4));
-    //     console.log("connections" + JSON.stringify(connections, null, 4));
-
     simulation2.force("link")
         .links(connections);
 
-    // console.log("after link init");
-    // console.log("vertices" + JSON.stringify(vertices, null, 4));
-    // console.log("connections" + JSON.stringify(connections, null, 4));
     recolorfg();
   }
 
@@ -568,22 +582,46 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
       .attr("fill", function(d) { return (currentColorScale == "group") ?  c(d.group) : c(d.count); })
   }
 
-  function ticked2() {      
+  function ticked2() {  
+    //move the lines    
     link2
+        .select("line")
         .attr("x1", function(d) { return d.source.x; })
         .attr("y1", function(d) { return d.source.y; })
         .attr("x2", function(d) { return d.target.x; })
         .attr("y2", function(d) { return d.target.y; });
 
+    //move the labels on the lines
+    linklabels        
+        .attr("x", function(d) {return (d.source.x + d.target.x) / 2})
+        .attr("y", function(d) {return (d.source.y + d.target.y) / 2})
+
+    //move the nodes
     node2
         .select("circle")
         .attr("cx", function(d) { return d.x; })
         .attr("cy", function(d) { return d.y; });
 
+    //move the text in the nodes
     node2
-        .select("text")
+        .selectAll("text")
         .attr("x", function(d) { return d.x; })
         .attr("y", function(d) { return d.y; });
+    
+  }
+
+  function showValue(v){
+    console.log("mouseover" + v.id);
+    //show the link value
+    svg3.selectAll(".link")
+    .filter(function(d) { return v.id == d.source.id || v.id == d.target.id })    
+    .style("opacity", 1);
+  }
+
+  function hideValue(d){
+    //hide all link values
+    svg3.selectAll(".link")
+    .style("opacity", 0);
   }
 
 });
