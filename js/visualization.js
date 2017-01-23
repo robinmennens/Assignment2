@@ -681,11 +681,6 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
 
   // FOCUS GRAPH FUNCTIONS HERE -------------------------------------
 
-<<<<<<< HEAD
-=======
-
-
->>>>>>> origin/master
   var link2;
   var node2;
   var linklabels;
