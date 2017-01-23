@@ -74,6 +74,12 @@ var simulation = d3.forceSimulation()
     .force("charge", d3.forceManyBody().strength(-35))
     .force("center", d3.forceCenter(width2 / 2, (height2 / 2) + 35));
 
+var radius = {
+  normal: 5,
+  selected: 8,
+  clicked: 10
+}
+
 
 // FOCUS GRAPH VARIABLES --------------------------------------------
 
@@ -215,72 +221,125 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
   }
 
   //called when the mouse moves over a cell
-  var lastNodesSelected = [];  
   function onMouseOverCell(p) {
+    console.log(" ++++++ MOUSE OVER cell (" + p.x + ", " + p.y + ")");
+
     // show pointer if there is a relationship
     d3.select(this).filter(function(){ return p.z; }).style("cursor", "pointer");
 
-    // highlight text on both row and column
-    d3.selectAll(".row text").classed("active", function(d, j) { return j == p.y; });
-    d3.selectAll(".column text").classed("active", function(d, j) { return j == p.x; });
+    // highlight both row and column in the matrix
+    selectRowColumn(p.x, p.y);
 
-    // highlight both row and column
-    highlightCell(p.x, p.y, true);
+    // highlight the node(s) in the graph
+    if (p.x == p.y) { selectNode(p.x); }
+    else { if (p.z > 0) selectEdge(p.x, p.y); }
+  }
 
-    // if the cell is on the diagonal temporarily highlight a node in forcegraph
-    // otherwise highlight the two nodes of the corresponding edge
-    if (p.x == p.y) {
-      onNodeClick(d3.selectAll("circle"), p.x);
-      lastNodesSelected[0] = p.x; }
-    else if (p.x != p.y && p.z > 0) { 
-      onEdgeClick(p.x, p.y);
-      lastNodesSelected[0] = p.x;
-      lastNodesSelected[1] = p.y; }
-    else if (p.z == 0 || p.z == null) {
-      if (lastNodesSelected[0] >= 0 && lastNodesSelected[1] >= 0) {
-        // it was an edge
-        onEdgeClick(lastNodesSelected[0], lastNodesSelected[1]); 
-      } else if (lastNodesSelected[0] >= 0) {
-        // it is a node
-        onNodeClick(d3.selectAll("circle"), lastNodesSelected[0]);
-      }
-      lastNodesSelected[0] = -1;
-      lastNodesSelected[1] = -1;
+  function onMouseOutCell(p) {
+    // deselect the row and the column in the matrix
+    selectRowColumn(p.x, p.y);
+    // deselect the node(s) in the graph
+    if (p.x == p.y) { selectNode(p.x); }
+    else { if (p.z > 0) selectEdge(p.x, p.y); }
+
+    console.log(" ------ MOUSE OUT cell (" + p.x + ", " + p.y + ")");
+  }
+
+  // highlights the corresponding row and column
+  function selectRowColumn(r, c){
+
+    // identify the corresponding row and row
+    // * please notice that the filtering is necessary to filter out the selected cell
+    var selectedRow = 
+      d3.selectAll(".row").filter(function(d, j){ return c+1 == j })
+        .selectAll(".cell").filter(function(d, j){ return j != r && d.z == 0; });
+    var selectedColumn = 
+      d3.selectAll(".row").filter(function(d, j){ return c+1 != j })
+        .selectAll(".cell").filter(function(d, j){return j == r && d.z == 0;});
+
+    // check separately if they are already selected and if they are not already marked
+    var isRowSelected = 
+      (selectedRow.attr("class").indexOf("activeCell") >= 0) 
+      && (selectedRow.attr("class").indexOf("markedCell") == -1);
+    var isColumnSelected = 
+      (selectedColumn.attr("class").indexOf("activeCell") >= 0) 
+      && (selectedColumn.attr("class").indexOf("markedCell") == -1);
+
+    if (isRowSelected && isColumnSelected) { console.log(" <<< UNSELECT cell (" + r + ", " + c + ")"); }
+    if (!isRowSelected && !isColumnSelected) { console.log(" >>> SELECT cell (" + r + ", " + c + ")"); }
+
+    // downplay text on all rows and columns
+    d3.selectAll(".row text").classed("active", false);
+    d3.selectAll(".column text").classed("active", false);
+    d3.selectAll(".row").selectAll(".cell").classed("activeCell", false);
+    d3.selectAll(".column").selectAll(".cell").classed("activeCell", false);
+
+    // highlight accordingly
+    selectedRow.classed("activeCell", !isRowSelected);
+    selectedColumn.classed("activeCell", !isColumnSelected);
+
+    // highlight text on row and column
+    if (!isRowSelected) { d3.selectAll(".row text").classed("active", function(d, j) { return j == c; }); }
+    if (!isColumnSelected) { d3.selectAll(".column text").classed("active", function(d, j) { return j == r; }); }
+  }
+
+  function onCellClick(d){
+    console.log(" ______ CLICK cell (" + d.x + ", " + d.y + ")");
+
+    // only cells with a relationship associated can be clicked
+    if (d.z > 0) {
+      // mark the cell in the matrix
+      markRowColumn(d.x, d.y);
+      // mark the node/edge in the graph
+      (d.x == d.y) ? markNode(d.x) : markEdge(d.x, d.y);
     }
+  }  
+
+  // IMPORTANT: THEY MUST BE CLASS VARIABLES
+  var wasRowMarked = false;
+  var wasColumnMarked = false;
+  function markRowColumn(r, c) {
+
+    // identify the corresponding row and row
+    var markedRow = 
+      d3.selectAll(".row").filter(function(d, j){ return c+1 == j })
+        .selectAll(".cell").filter(function(d, j){ return j != r && d.z == 0; });
+    var markedColumn = 
+      d3.selectAll(".row").filter(function(d, j){ return c+1 != j })
+        .selectAll(".cell").filter(function(d, j){return j == r && d.z == 0;});
+
+    // check separately if they are already marked
+    wasRowMarked = (markedRow.attr("class").indexOf("markedCell") >= 0);
+    wasColumnMarked = (markedColumn.attr("class").indexOf("markedCell") >= 0);
+
+    if (wasRowMarked && wasColumnMarked) { console.log(" <<< UNMARK cell (" + r + ", " + c + ")"); }
+    if (!wasRowMarked || !wasColumnMarked) { console.log(" >>> MARK cell (" + r + ", " + c + ")"); }
+
+    // clear all the previous marks and selections
+    // * please notice that we cannot clear before not to lose the information about the clicked row/column
+    d3.selectAll(".row text").classed("marked", false);
+    d3.selectAll(".column text").classed("marked", false);
+    d3.selectAll(".row").selectAll(".cell").classed("activeCell", false);
+    d3.selectAll(".column").selectAll(".cell").classed("activeCell", false);
+    d3.selectAll(".row").selectAll(".cell").classed("markedCell", false);
+    d3.selectAll(".column cell").selectAll(".cell").classed("markedCell", false);
+
+    // mark rows and columns accordingly
+    markedRow.classed("markedCell", !wasRowMarked || !wasColumnMarked);
+    markedColumn.classed("markedCell", !wasRowMarked || !wasColumnMarked);
+
+    // mark text accordingly
+    if (!wasRowMarked) { d3.selectAll(".row text").classed("marked", function(d, j) { return j == c; }); }
+    if (!wasColumnMarked) { d3.selectAll(".column text").classed("marked", function(d, j) { return j == r; }); }
+
+    // if we have unclicked the cell, then we have also to select it after the unmarking
+    if(wasRowMarked && wasColumnMarked){ selectRowColumn(r, c); }
   }
 
   function onMouseOverText(p, i) {
     console.log("i:" + i);
     d3.selectAll(".row text").classed("active", function(d, j) { return i == j; }).style("cursor", "pointer");
     d3.selectAll(".column text").classed("active", function(d, j) { return i == j; }).style("cursor", "pointer");
-  }
-
-  function onMouseOutCell(d, i) {
-    d3.selectAll(".cell").classed("activeCell", false);
-    d3.selectAll("text").classed("active", false);
-  }
-
-  function onCellClick(d){
-    if (d.z > 0) { onEdgeClick(d.x, d.y); }
-  }
-
-  //function called to change the order of the axis
-  function order(value) {
-    //change the domain
-    x.domain(orders[value]);
-
-    var t = svg.transition().duration(2500);
-
-    t.selectAll(".row")
-        .delay(function(d, i) { return x(i) * 4; })
-        .attr("transform", function(d, i) { return "translate(0," + x(i) + ")"; })
-      .selectAll(".cell")
-        .delay(function(d) { return x(d.x) * 4; })
-        .attr("x", function(d) { return x(d.x); });
-
-    t.selectAll(".column")
-        .delay(function(d, i) { return x(i) * 4; })
-        .attr("transform", function(d, i) { return "translate(" + x(i) + ")rotate(-90)"; });
   }
 
 
@@ -292,17 +351,14 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     .selectAll("line")
     .data(miserables.edges)
     .enter().append("line")
-      .attr("stroke-width", function(d) { return 1/*Math.sqrt(d.value)*/; })
-    .on("click", onEdgeClick)
-    .on("mouseover", mouseOverForceGraph)
-    .on("mouseout", mouseOutForceGraph);
+      .attr("stroke-width", function(d) { return 1/*Math.sqrt(d.value)*/; });
 
   var node = svg2.append("g")
       .attr("class", "nodes")
     .selectAll("circle")
     .data(miserables.nodes)
     .enter().append("circle")
-      .attr("r", 5)
+      .attr("r", radius.normal)
       .attr("fill", function(d) { return c(d.group); })
       .on("click", onNodeClick)
       .on("mouseover", mouseOverForceGraph)
@@ -353,11 +409,132 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     d.fy = null;
   }
 
+  function mouseOverForceGraph(d, i) {
+    console.log(" ++++++ [MOUSE OVER] node (" + i + ")");
+
+    // show the pointer
+    d3.select(this).style("cursor", "pointer");
+    // select/unselect the row and the column in the matrix
+    selectRowColumn(i, i);
+    // select/unselect the node in the graph
+    selectNode(i);
+  }
+
+  function mouseOutForceGraph(d, i){
+    // select/unselect the row and the column in the matrix
+    selectRowColumn(i, i);
+    // select/unselect the node in the graph
+    selectNode(i);
+
+    console.log(" ------ [MOUSE OUT] node (" + i + ")");    
+  }
+
+  function selectNode(n){
+
+    // check if the node was selected
+    var selectedNode = svg2.selectAll("circle").filter(function(p){ return n == p.id; });
+    var wasNodeClicked = (selectedNode.attr("r") == radius.clicked);
+    var wasNodeSelected = (selectedNode.attr("r") == radius.selected);
+
+    // if the node was already clicked we leave it clicked
+    // otherwise we resize it accordingly
+    selectedNode.attr("r", function(){
+      if (wasNodeClicked) { 
+        return radius.clicked; }
+      else { 
+        if (wasNodeSelected) {
+          console.log(" <<< UNSELECT node (" + n + ")");
+        } else {
+          console.log(" >>> SELECT node (" + n + ")");
+        }
+        return (wasNodeSelected) ? radius.normal : radius.selected; 
+      }
+    });
+  }
+
+  function selectEdge(n1, n2){
+    selectNode(n1);
+    selectNode(n2);
+  }
+
+  function onNodeClick(d, i){
+    console.log(" ______ CLICK node (" + i + ")");
+
+    // mark/unmark the cell on the grid
+    markRowColumn(i, i);
+    // mark/unmark the node in the graph
+    markNode(i);
+    // show the focus on the node
+    setFocusGraphNode(i);
+  }
+
+  function markNode(n){
+    // check if the node was clicked or selected
+    var clickedNode = svg2.selectAll("circle").filter(function(p){ return n == p.id; });
+    var wasNodeClicked = (clickedNode.attr("r") == radius.clicked);
+    console.log("la vedi? " + wasColumnMarked + ", " + wasRowMarked);
+    // shrink all the nodes except the selected one
+    svg2.selectAll("circle").attr("r", radius.normal);
+
+    if (wasNodeClicked && wasColumnMarked && wasRowMarked) { console.log(" <<< UNMARK node (" + n + ")"); }
+    else { console.log(" >>> MARK node (" + n + ")"); }
+
+    // resize accordingly: if it was clicked, we shrink it to selected; if it was selected we enlarge it to clicked
+    clickedNode.attr("r", function(){ 
+      if(wasNodeClicked && wasColumnMarked && wasRowMarked) { return radius.selected; }
+      else { return radius.clicked; }
+      });
+  }
+
+  function markEdge(n1, n2){
+    // check if the node 1 was clicked
+    var clickedNode1 = svg2.selectAll("circle").filter(function(p){ return n1 == p.id; });
+    var wasNode1Clicked = (clickedNode1.attr("r") == radius.clicked);
+
+    // check if the node 1 was clicked
+    var clickedNode2 = svg2.selectAll("circle").filter(function(p){ return n2 == p.id; });
+    var wasNode2Clicked = (clickedNode2.attr("r") == radius.clicked);
+
+    // shrink all the nodes
+    svg2.selectAll("circle").attr("r", radius.normal);
+
+    if (wasNode1Clicked && wasNode2Clicked) { console.log(" <<< UNMARK edge (" + n1 + ", " + n2 + ")"); }
+    else { console.log(" >>> MARK edge (" + n1 + ", " + n2 + ")"); }
+
+    // if at least one of them is clicked we enlarge both
+    // if both are clicked or normal we resize them accordingly
+    if (wasNode1Clicked == wasNode2Clicked && wasNode1Clicked){
+      clickedNode1.attr("r", radius.selected);
+      clickedNode2.attr("r", radius.selected);
+    } else {
+      clickedNode1.attr("r", radius.clicked);
+      clickedNode2.attr("r", radius.clicked);
+    }
+  }
 
   // GENERAL FUNCTIONS HERE ---------------------------------------------
 
   //the default coloring
   recolor(currentColorScale);
+
+  //function called to change the order of the axis
+  function order(value) {
+    //change the domain
+    x.domain(orders[value]);
+
+    var t = svg.transition().duration(2500);
+
+    t.selectAll(".row")
+        .delay(function(d, i) { return x(i) * 4; })
+        .attr("transform", function(d, i) { return "translate(0," + x(i) + ")"; })
+      .selectAll(".cell")
+        .delay(function(d) { return x(d.x) * 4; })
+        .attr("x", function(d) { return x(d.x); });
+
+    t.selectAll(".column")
+        .delay(function(d, i) { return x(i) * 4; })
+        .attr("transform", function(d, i) { return "translate(" + x(i) + ")rotate(-90)"; });
+  }
 
   //function called to change the colors of the visualizations
   function recolor(value) {
@@ -398,47 +575,8 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     recolorfg();
   }
 
-  function highlightCell(x, y, isActive){
-    d3.selectAll(".row").filter(function(d, j){ return y+1 == j })
-      .selectAll(".cell").filter(function(d, j){ return j != x && d.z == 0; }).classed("activeCell", isActive); 
-       
-    d3.selectAll(".row").filter(function(d, j){ return y+1 != j })
-      .selectAll(".cell").filter(function(d, j){return j == x && d.z == 0;}).classed("activeCell", isActive);
-  }
-
-  function mouseOverForceGraph(d, i){
-    d3.select(this).style("cursor", "pointer");
-    highlightCell(i, i, true);
-  }
-
-  function mouseOutForceGraph(d, i){
-    highlightCell(i, i, false);
-  }
-
-  function onNodeClick(d, i){
-    var r = d3.selectAll("circle").filter(function(p){ return i == p.id; }).attr("r");
-    // if a circle has been clicked then shrink all the circles and then select the correct one
-    svg2.selectAll("circle").attr("r", 5);
-    svg2.selectAll("circle").filter(function(p){ return i == p.id; })
-      .attr("r", function(){ return (r == 5) ? 15 : 5; });
-
-    setFocusGraphNode(i);
-  }
-
-  function onEdgeClick(x, y){
-    var rx = d3.selectAll("circle").filter(function(p){ return x == p.id; }).attr("r");
-    var ry = d3.selectAll("circle").filter(function(p){ return y == p.id; }).attr("r");
-    // if a circle has been clicked then shrink all the circles and then select the correct one
-    svg2.selectAll("circle").attr("r", 5);
-    svg2.selectAll("circle").filter(function(p){ return x == p.id; })
-      .attr("r", function(){ return (rx == 5) ? 15 : 5; });
-    svg2.selectAll("circle").filter(function(p){ return y == p.id; })
-      .attr("r", function(){ return (ry == 5) ? 15 : 5; });
-  }
-
 
   // FOCUS GRAPH FUNCTIONS HERE -------------------------------------
-
 
   var link2;
   var node2;
@@ -473,7 +611,7 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
         if(miserables.edges[connection].source.id != i){
           vertices.push(source);
           //vertices.push(jQuery.extend(true, {}, miserables.edges[connection].source));
-          console.log("source added:" + vertices[vertices.length - 1].id);
+          //console.log("source added:" + vertices[vertices.length - 1].id);
         } else {
           //the source is the clicked node, we add it only once
           if(!added){
@@ -487,7 +625,7 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
         if(miserables.edges[connection].target.id != i){
           vertices.push(target);
           //vertices.push(jQuery.extend(true, {}, miserables.edges[connection].target));
-          console.log("target added:" + vertices[vertices.length - 1].id);
+          //console.log("target added:" + vertices[vertices.length - 1].id);
         } else {
           //the target is the clicked node, we add it only once
           if(!added){
