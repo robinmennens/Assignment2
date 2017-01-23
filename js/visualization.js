@@ -31,6 +31,12 @@ var matrix = [];
 // contains data about the nodes themselves
 var nodes = [];
 
+//Tooltip
+
+var tip = d3.select("body").append("div")
+.attr("class", "tooltip")
+.style("opacity", 0);
+
 
 // MATRIX VARIABLES ------------------------------------------------
 
@@ -91,7 +97,18 @@ var svg3 = d3.select(".focusgraph").append("svg")
     .attr("width", width3)
     .attr("height", height3)   
     .style("display", "block")
-    .style("margin", "auto");    
+    .style("margin", "auto");
+
+// SCALE VARIABLES --------------------------------------------------
+
+width4 = 370,
+height4 = 20;
+
+var svg4 = d3.select(".scale").append("svg")
+.attr("width", width4)
+.attr("height", height4)   
+.style("display", "block")
+.style("margin", "auto");
 
 
 // DATA INITIALIZATION ----------------------------------------------
@@ -148,6 +165,11 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
   //when the color dropdown value is changed, change the sort order
   d3.select("#coloring").on("change", function() {
     recolor(this.value);
+    if(this.value == "count") {
+      showScale();
+    } else {
+      hideScale();
+    }
   });  
 
   // MATRIX SETUP --------------------------------------------------
@@ -199,6 +221,29 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
       .text(function(d, i) { return nodes[i].label; })
       .on("click", onNodeClick)  // (M) attach a function to call on click
       .on("mouseover", onMouseOverText);
+
+  //add tooltip image
+  svg.append("svg:image")
+   .attr('x',-25)
+   .attr('y',-25)
+   .attr('width', 24)
+   .attr('height', 24)
+   .attr("xlink:href","http://images.clipartpanda.com/question-mark-icon-Question-Mark-Icon.jpg")
+   .on("mouseover", function(d) {      
+
+       tip.transition()
+         .duration(200)
+         .style("opacity", .9);
+
+       tip.html("-Click on a name to focus on that person. <br/> -Hover over cells to see more information.")
+         .style("left", 115 + "px")
+         .style("top", 140 + "px");
+    })
+    .on("mouseout", function(d) {
+       tip.transition()
+         .duration(500)
+         .style("opacity", 0);
+    });
 
   function row(row) {
     var cell = d3.select(this).selectAll(".cell")
@@ -377,6 +422,64 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
   simulation
     .force("link")
     .links(miserables.edges);
+
+  //add tooltip image
+  svg2.append("svg:image")
+   .attr('x',0)
+   .attr('y',0)
+   .attr('width', 24)
+   .attr('height', 24)
+   .attr("xlink:href","http://images.clipartpanda.com/question-mark-icon-Question-Mark-Icon.jpg")
+   .on("mouseover", function(d) {    
+
+       tip.transition()
+         .duration(200)
+         .style("opacity", .9);
+
+       tip.html("-Click on a node to focus on that person.")
+         .style("left", 788 + "px")
+         .style("top", 35 + "px");
+    })
+    .on("mouseout", function(d) {
+       tip.transition()
+         .duration(500)
+         .style("opacity", 0);
+    });
+
+
+  // SCALE STARTS HERE --------------------------------------------
+
+
+  function showScale(){
+    for(i = 1; i < 159; i++){
+      svg4.append("rect")
+      .attr("width", 2)
+      .attr("height", height4 - 2)
+      .attr("x", (2 * i) + 17)
+      .attr("y", 1)
+      .attr("fill", c(i))
+      .append("title")
+      .text(i);
+    }
+
+    svg4.append("text")
+      .attr("y", 15) 
+      .attr("x", 8)  
+      .classed("scaleText", true)   
+      .text("0");
+
+    svg4.append("text")
+      .attr("y", 15)
+      .attr("x", 336)
+      .classed("scaleText", true)  
+      .text("158");
+
+  }
+
+  function hideScale(){
+    svg4.selectAll("*").remove();
+  }
+
 
   // FORCE DIRECTED GRAPH FUNCTIONS -------------------------------
 
@@ -578,6 +681,11 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
 
   // FOCUS GRAPH FUNCTIONS HERE -------------------------------------
 
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> origin/master
   var link2;
   var node2;
   var linklabels;
@@ -587,6 +695,29 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
 
     //clear the svg
     svg3.selectAll("*").remove();
+
+    //add tooltip image
+    svg3.append("svg:image")
+     .attr('x',0)
+     .attr('y',0)
+     .attr('width', 24)
+     .attr('height', 24)
+     .attr("xlink:href","http://images.clipartpanda.com/question-mark-icon-Question-Mark-Icon.jpg")
+     .on("mouseover", function(d) {        
+
+         tip.transition()
+           .duration(200)
+           .style("opacity", .9);
+
+         tip.html("-Values in the nodes represent the number of occurrences.<br/>-Hover over a node to see the number of occurrences of the related edge(s).<br/>-Click on a node to focus on that person.")
+           .style("left", 788 + "px")
+           .style("top", 495 + "px");
+      })
+      .on("mouseout", function(d) {
+         tip.transition()
+           .duration(500)
+           .style("opacity", 0);
+      });
 
     var simulation2 = d3.forceSimulation()
     .force("link", d3.forceLink().id(function(d) { return d.id; }))
@@ -674,7 +805,9 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
       .attr("group", function(d) {return d.group;})
       .attr("count", function(d) {return d.count;})
       .on("mouseover", showValue)
-      .on("mouseout", hideValue);
+      .on("mouseout", hideValue)
+      .on("click", function(d) {setFocusGraphNode(d.id)})
+      .style("cursor", "pointer");
 
     //add node labels (names)
     node2.append("text")
