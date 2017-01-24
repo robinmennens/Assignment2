@@ -41,6 +41,11 @@
             font-weight: bold;
         }
 
+        .markedLine {
+            stroke-width: 3px;
+            stroke: black !important;
+        }
+
         .activeCell{
             fill: #d7d7d6 !important;
         }
@@ -54,14 +59,25 @@
             fill: black;
             font-size: 10px;
             font-weight: bold;
+            pointer-events: none !important;
             cursor: default !important;            
         }  
+
+        .nodelabel{
+            font-family: sans-serif;
+            fill: black;
+            font-size: 12px;
+            font-weight: bold;
+            pointer-events: none !important;        
+            cursor: default !important;            
+        } 
 
         .edgecount{
             font-family: sans-serif;
             fill: black;
             font-size: 14px;
             font-weight: 900;
+            pointer-events: none !important;
             cursor: default !important;
             stroke: white !important;            
         }   

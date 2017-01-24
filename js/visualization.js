@@ -327,6 +327,7 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
          markNode(d.x);
       } else {
         markEdge(d.x, d.y);
+        setFocusGraphEdge(d.x, d.y, d);
       }
     }
   }  
@@ -393,7 +394,9 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
       .attr("class", "nodes")
     .selectAll("circle")
     .data(miserables.nodes)
-    .enter().append("circle")
+    .enter().append("g");
+
+  node.append("circle")
       .attr("r", radius.normal)
       .attr("fill", function(d) { return c(d.group); })
       .on("click", onNodeClick)
@@ -403,8 +406,18 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
                      .on("drag", dragged)
                      .on("end", dragended));
 
-  node.append("title")
-    .text(function(d) { return d.label; });
+  //add the node labels
+  var nodelabels = svg2.append("g")
+    .attr("class", "nodelabels")
+    .selectAll("text")
+    .data(miserables.nodes)
+    .enter().append("text")
+      .attr("dx", 12)
+      .attr("dy", ".35em")
+      .classed("nodelabel", true)
+      .style("opacity", 0)
+      .style("pointer-events", "none")
+      .text(function(d) {return d.label});
 
   simulation
     .nodes(miserables.nodes)
@@ -481,9 +494,13 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
         .attr("x2", function(d) { return d.target.x; })
         .attr("y2", function(d) { return d.target.y; });
 
-    node
+    node.select("circle")
         .attr("cx", function(d) { return d.x; })
         .attr("cy", function(d) { return d.y; });
+
+    nodelabels
+        .attr("x", function(d) { return d.x; })
+        .attr("y", function(d) { return d.y; });
   }
 
   function dragstarted(d) {
@@ -505,6 +522,11 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
 
   function mouseOverForceGraph(d, i) {
     console.log(" ++++++ [MOUSE OVER] node (" + i + ")");
+    
+    //show node label    
+    svg2.selectAll(".nodelabel")
+    .filter(function(p) { return d.id == p.id; })
+    .style("opacity", 1);
 
     // show the pointer
     d3.select(this).style("cursor", "pointer");
@@ -515,6 +537,9 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
   }
 
   function mouseOutForceGraph(d, i){
+
+    //hide node labels
+    svg2.selectAll(".nodelabel").style("opacity", 0);
     // select/unselect the row and the column in the matrix
     selectRowColumn(i, i);
     // select/unselect the node in the graph
@@ -584,8 +609,7 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
       });
   }
 
-  function markEdge(n1, n2){
-    svg3.selectAll("*").remove();
+  function markEdge(n1, n2){    
 
     // check if the node 1 was clicked
     var clickedNode1 = svg2.selectAll("circle").filter(function(p){ return n1 == p.id; });
@@ -604,16 +628,31 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     // if at least one of them is clicked we enlarge both
     // if both are clicked or normal we resize them accordingly
     if (wasNode1Clicked == wasNode2Clicked && wasNode1Clicked){
+      //make them larger to pop out
       clickedNode1.transition().duration(250).attr("r", radius.selected + 5);
       clickedNode2.transition().duration(250).attr("r", radius.selected + 5);
+
+      //shrink them back to the size we want
       clickedNode1.transition().delay(250).attr("r", radius.selected);
       clickedNode2.transition().delay(250).attr("r", radius.selected);
     } else {
       clickedNode1.transition().duration(250).attr("r", radius.clicked + 5);
       clickedNode2.transition().duration(250).attr("r", radius.clicked + 5);
+
       clickedNode1.transition().delay(250).attr("r", radius.clicked);
       clickedNode2.transition().delay(250).attr("r", radius.clicked);
     }
+
+    //remove the marked line
+    svg2.selectAll(".markedLine")
+    .classed("markedLine", false); //class is just used to identify it
+  
+
+    svg2.selectAll("line")
+      .filter(function(d) { return ((d.source.id == n1 && d.target.id == n2) || (d.source.id == n2 && d.target.id == n1))})
+      .classed("markedLine", true);
+
+
   }
 
   // GENERAL FUNCTIONS HERE ---------------------------------------------
@@ -641,46 +680,61 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
   }
 
   //function called to change the colors of the visualizations
-  function recolor(value, delay) {
-    dur = (delay) ? 750 : 0;
+  function recolor(value, delay) {    
     //change the scale
     c = colorScales[value];
 
-    d3.selectAll(".cell")
-    .transition()
-    .duration(dur)
-    .style("fill", function(d) {
-      if(d.z >= 1){
-        if(value == "count"){
-          return c(d.z); 
-        } else if (value == "group"){
-          if(nodes[d.x].group == nodes[d.y].group){
-            return c(nodes[d.x].group); 
-          } else {
-            return null;
-          }
-        } else {
-            return(c(d.z));
-        }
-      } else {
-        return noColor;
-      }     
-    })
+    //I had to do it like this.. changing the duration of the transition with an if statement
+    //would delay the page load for some weird reason
+    if(delay) {
+      d3.selectAll(".cell")
+      .transition()
+      .duration(750)
+      .style("fill", function(d) { return getCellColor(d, value);})
+    } else {
+      d3.selectAll(".cell")     
+      .style("fill", function(d) { return getCellColor(d, value);})
+    }
 
     //update the graph
-    svg2.selectAll("circle")
-    .transition()
-    .duration(750)
-    .attr("fill", function(d, i) {
-      if(value == "count"){
-        return c(nodes[i].count) 
-      } else {
-        return c(nodes[i].group); 
-      }
-    })
+    if(delay){
+      svg2.selectAll("circle")
+      .transition()
+      .duration(750)
+      .attr("fill", function(d, i) { return getNodeColor(d, i, value); });
+    } else {
+      svg2.selectAll("circle")      
+      .attr("fill", function(d, i) { return getNodeColor(d, i, value); });
+    }
 
     //also recolor the focus graph
-    recolorfg(true);
+    recolorfg(delay);
+  }
+
+  function getCellColor(d, value){
+    if(d.z >= 1){
+      if(value == "count"){
+        return c(d.z); 
+      } else if (value == "group"){
+        if(nodes[d.x].group == nodes[d.y].group){
+          return c(nodes[d.x].group); 
+        } else {
+          return null;
+        }
+      } else {
+          return(c(d.z));
+      }
+    } else {
+      return noColor;
+    }     
+  }
+
+  function getNodeColor(d, i, value){    
+    if(value == "count"){
+      return c(nodes[i].count) 
+    } else {
+      return c(nodes[i].group); 
+    }
   }
 
 
@@ -689,6 +743,7 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
   var link2;
   var node2;
   var linklabels;
+  var simulation2;
 
   function setFocusGraphNode(i){
     //only use i, d is different depending if text or a node was clicked    
@@ -719,7 +774,7 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
            .style("opacity", 0);
       });
 
-    var simulation2 = d3.forceSimulation()
+    simulation2 = d3.forceSimulation()
     .force("link", d3.forceLink().id(function(d) { return d.id; }))
     .force("charge2", d3.forceManyBody().strength(-700));
 
@@ -819,6 +874,7 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     node2.append("text")
         .attr("dx", 12)
         .attr("dy", ".35em")
+        .classed("nodelabel", true)
         .text(function(d) {return d.label});
 
     //add node labels (values)
@@ -853,13 +909,141 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     recolorfg(false);
   }
 
+  function setFocusGraphEdge(x, y, e){
+    console.log("setFocusEdge, x: " + x + ", y: " + y);
+    console.log("x object: " + JSON.stringify(nodes[x], null, 4));
+    console.log("y object: " + JSON.stringify(nodes[y], null, 4));
+    console.log("edge: " + JSON.stringify(e, null, 4));
+
+    e.source = e.x;
+    e.target = e.y;
+
+    //clear the svg
+    svg3.selectAll("*").remove();
+
+    //add tooltip image
+    svg3.append("svg:image")
+     .attr('x',0)
+     .attr('y',0)
+     .attr('width', 24)
+     .attr('height', 24)
+     .attr("xlink:href","http://images.clipartpanda.com/question-mark-icon-Question-Mark-Icon.jpg")
+     .on("mouseover", function(d) {        
+
+         tip.transition()
+           .duration(200)
+           .style("opacity", .9);
+
+         tip.html("-Values in the nodes represent the number of occurrences.<br/>-Hover over a node to see the number of occurrences of the related edge(s).<br/>-Click on a node to focus on that person.")
+           .style("left", 788 + "px")
+           .style("top", 495 + "px");
+      })
+      .on("mouseout", function(d) {
+         tip.transition()
+           .duration(500)
+           .style("opacity", 0);
+      });
+
+    simulation2 = d3.forceSimulation()
+    .force("link", d3.forceLink().id(function(d) { return d.id; }))
+    .force("charge2", d3.forceManyBody().strength(0));
+    
+
+
+    vertices = [];
+    connections = [];    
+
+    vertices.push(jQuery.extend(true, {}, nodes[x]));
+    vertices.push(jQuery.extend(true, {}, nodes[y]));
+    connections.push(jQuery.extend(true, {}, e));
+
+    vertices[0].fy = height3 / 2;
+    vertices[0].fx = width3 * 0.6; 
+    vertices[0].pos = "right";
+    vertices[1].pos = "left";
+
+    //make a group for all links and a group for each link
+    link2 = svg3.append("g")
+      .attr("class", "links")
+    .selectAll("line")
+    .data(connections)
+    .enter().append("g")
+    .attr("source", function(d) { return d.source; } )
+    .attr("target", function(d) { return d.target; } );
+
+    //add lines to every group
+    link2.append("line")
+      .attr("stroke-width", 2);  
+
+    //add a group for the nodes and a group for every node
+    node2 = svg3.append("g")
+      .attr("class", "nodes")
+      .selectAll("circle")
+      .data(vertices)
+      .enter().append("g")
+      .attr("class", "node")
+      .attr("id", function(d) { return d.id; } );
+
+    //add circles to the node groups
+    node2.append("circle")
+      .attr("r", 10)
+      .attr("fill", "black")
+      .attr("group", function(d) {return d.group;})
+      .attr("count", function(d) {return d.count;})
+      .on("click", function(d) {onNodeClick(d, d.id)})
+      .style("cursor", "pointer");
+
+    //add node labels (names)
+    node2.append("text")
+        .attr("dx", function(d) {return (d.pos == "right") ? 12 : -12})
+        .attr("text-anchor", function(d) {return (d.pos == "right") ? "start" : "end"})
+        .attr("dy", ".35em")
+        .text(function(d) {return d.label});
+
+    //add node labels (values)
+    node2.append("text")        
+        .attr("text-anchor", "middle")        
+        .attr("dy", ".35em")
+        .attr("pointer-events", "none")
+        .classed("nodecount", true)
+        .text(function(d) {return d.count});
+
+    //add this as the last because it should always be drawn on top    
+    linklabels = svg3.append("g")
+        .attr("class", "linklabels")
+        .selectAll("text")
+        .data(connections)
+        .enter().append("text")
+      .attr("dy", -3)
+      .attr("text-anchor", "middle")                
+        .classed("edgecount", true)
+        .classed("link", true)
+        .attr("source", function(d) { return d.source; } )
+        .attr("target", function(d) { return d.target; } )
+        .style("opacity", 1)        
+        .text(function(d) {return d.z});    
+
+    simulation2
+        .nodes(vertices)
+        .on("tick", ticked2);
+
+    simulation2.force("link")
+        .links(connections);
+
+    simulation2    
+    .force("left", d3.forceX(width3 * 0.25).strength(0.3));
+
+    recolorfg(false);
+  }
+
   //recolors the fg, we do this separate because it needs to happen more often
   function recolorfg(delay){
     dur = (delay) ? 750 : 0;
+    
     svg3.selectAll("circle")
       .transition()
       .duration(dur)
-      .attr("fill", function(d) { return (currentColorScale == "group") ?  c(d.group) : c(d.count); })
+      .attr("fill", function(d) { return (coloring.value == "group") ?  c(d.group) : c(d.count); })
   }
 
   function ticked2() {  
