@@ -258,6 +258,8 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     // show pointer if there is a relationship
     d3.select(this).filter(function(){ return p.z; }).style("cursor", "pointer");
 
+    showNodeLabel(p);
+
     // highlight both row and column in the matrix
     selectRowColumn(p.y, p.x);
 
@@ -327,6 +329,10 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
 
   function onCellClick(d){
     console.log(" ______ CLICK cell (" + d.x + ", " + d.y + ")");
+
+    //remove the marked line
+    svg2.selectAll(".markedLine")
+    .classed("markedLine", false); //class is just used to identify it
 
     // only cells with a relationship associated can be clicked
     if (d.z > 0) {
@@ -457,7 +463,7 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
          .duration(200)
          .style("opacity", .9);
 
-       tip.html("-Click on a node to focus on that person.")
+       tip.html("-Click on a node to focus on that person.<br/>-Drag the nodes around to rearrange the graph.")
          .style("left", 788 + "px")
          .style("top", 35 + "px");
     })
@@ -466,6 +472,8 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
          .duration(500)
          .style("opacity", 0);
     });
+
+  recolor(coloring.value);
 
 
   // SCALE STARTS HERE --------------------------------------------
@@ -539,10 +547,7 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
   function mouseOverForceGraph(d, i) {
     console.log(" ++++++ [MOUSE OVER] node (" + i + ")");
     
-    //show node label    
-    svg2.selectAll(".nodelabel")
-    .filter(function(p) { return d.id == p.id; })
-    .style("opacity", 1);
+    showNodeLabel(d);
 
     // show the pointer
     d3.select(this).style("cursor", "pointer");
@@ -550,6 +555,13 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     selectRowColumn(i, i);
     // select/unselect the node in the graph
     selectNode(i);
+  }
+
+  function showNodeLabel(d){
+    //show node label    
+    svg2.selectAll(".nodelabel")
+    .filter(function(p) { return d.id == p.id; })
+    .style("opacity", 1);
   }
 
   function mouseOutForceGraph(d, i){
@@ -658,11 +670,6 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
       clickedNode1.transition().delay(250).attr("r", radius.clicked);
       clickedNode2.transition().delay(250).attr("r", radius.clicked);
     }
-
-    //remove the marked line
-    svg2.selectAll(".markedLine")
-    .classed("markedLine", false); //class is just used to identify it
-  
 
     svg2.selectAll("line")
       .filter(function(d) { return ((d.source.id == n1 && d.target.id == n2) || (d.source.id == n2 && d.target.id == n1))})
