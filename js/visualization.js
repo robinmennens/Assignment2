@@ -21,10 +21,8 @@ var colorScales = {
   group: d3.scaleOrdinal(d3.schemeCategory10)
 }
 
-var currentColorScale = "group";
-
 //maps values to colors
-var c = colorScales[currentColorScale];
+var c = colorScales["group"];
 
 // contains data about the relations between nodes
 var matrix = [];
@@ -32,10 +30,7 @@ var matrix = [];
 var nodes = [];
 
 //Tooltip
-
-var tip = d3.select("body").append("div")
-.attr("class", "tooltip")
-.style("opacity", 0);
+var tip = d3.select("body").append("div").attr("class", "tooltip").style("opacity", 0);
 
 
 // MATRIX VARIABLES ------------------------------------------------
@@ -65,7 +60,6 @@ var svg = d3.select(".matrix").append("svg")
 
 // GRAPH VARIABLES --------------------------------------------------
 
-
 width2 = 740,
 height2 = 460;
 
@@ -89,15 +83,15 @@ var radius = {
 
 // FOCUS GRAPH VARIABLES --------------------------------------------
 
-
 width3 = 740,
 height3 = 300;
 
 var svg3 = d3.select(".focusgraph").append("svg")
-    .attr("width", width3)
-    .attr("height", height3)   
-    .style("display", "block")
-    .style("margin", "auto");
+             .attr("width", width3)
+             .attr("height", height3)   
+             .style("display", "block")
+             .style("margin", "auto");
+
 
 // SCALE VARIABLES --------------------------------------------------
 
@@ -224,26 +218,20 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
 
   //add tooltip image
   svg.append("svg:image")
-   .attr('x',-25)
-   .attr('y',-25)
-   .attr('width', 24)
-   .attr('height', 24)
-   .attr("xlink:href","http://images.clipartpanda.com/question-mark-icon-Question-Mark-Icon.jpg")
-   .on("mouseover", function(d) {      
-
-       tip.transition()
-         .duration(200)
-         .style("opacity", .9);
-
-       tip.html("-Click on a name to focus on that person. <br/> -Hover over cells to see more information.")
+    .attr('x',-25)
+    .attr('y',-25)
+    .attr('width', 24)
+    .attr('height', 24)
+    .attr("xlink:href","http://images.clipartpanda.com/question-mark-icon-Question-Mark-Icon.jpg")
+    .on("mouseover", function(d) {      
+      tip.transition().duration(200).style("opacity", .9);
+      tip.html("-Click on a name to focus on that person. <br/> -Hover over cells to see more information.")
          .style("left", 115 + "px")
-         .style("top", 140 + "px");
-    })
+         .style("top", 140 + "px"); })
     .on("mouseout", function(d) {
-       tip.transition()
-         .duration(500)
-         .style("opacity", 0);
-    });
+      tip.transition()
+        .duration(500)
+        .style("opacity", 0); });
 
   function row(row) {
     var cell = d3.select(this).selectAll(".cell")
@@ -261,8 +249,7 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
         .on("click", onCellClick)
         .on("mouseover", onMouseOverCell)
         .on("mouseout", onMouseOutCell)
-        .append("title")
-        .text(function(d) { return d.z; });
+        .append("title").text(function(d) { return d.z; });
   }
 
   //called when the mouse moves over a cell
@@ -296,10 +283,10 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     // identify the corresponding row and row
     // * please notice that the filtering is necessary to filter out the selected cell
     var selectedRow = 
-      d3.selectAll(".row").filter(function(d, j){ return c+1 == j })
+      d3.selectAll(".row").filter(function(d, j){ return j == c+1 })
         .selectAll(".cell").filter(function(d, j){ return j != r && d.z == 0; });
     var selectedColumn = 
-      d3.selectAll(".row").filter(function(d, j){ return c+1 != j })
+      d3.selectAll(".row").filter(function(d, j){ return j != c+1 })
         .selectAll(".cell").filter(function(d, j){return j == r && d.z == 0;});
 
     // check separately if they are already selected and if they are not already marked
@@ -336,7 +323,11 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
       // mark the cell in the matrix
       markRowColumn(d.x, d.y);
       // mark the node/edge in the graph
-      (d.x == d.y) ? markNode(d.x) : markEdge(d.x, d.y);
+      if (d.x == d.y) {
+         markNode(d.x);
+      } else {
+        markEdge(d.x, d.y);
+      }
     }
   }  
 
@@ -567,8 +558,6 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     markRowColumn(i, i);
     // mark/unmark the node in the graph
     markNode(i);
-    // show the focus on the node
-    setFocusGraphNode(i);
   }
 
   function markNode(n){
@@ -579,17 +568,25 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     // shrink all the nodes except the selected one
     svg2.selectAll("circle").attr("r", radius.normal);
 
-    if (wasNodeClicked && wasColumnMarked && wasRowMarked) { console.log(" <<< UNMARK node (" + n + ")"); }
+    if (wasNodeClicked && wasColumnMarked && wasRowMarked) {  }
     else { console.log(" >>> MARK node (" + n + ")"); }
 
     // resize accordingly: if it was clicked, we shrink it to selected; if it was selected we enlarge it to clicked
     clickedNode.attr("r", function(){ 
-      if(wasNodeClicked && wasColumnMarked && wasRowMarked) { return radius.selected; }
-      else { return radius.clicked; }
+      if(wasNodeClicked && wasColumnMarked && wasRowMarked) {
+        console.log(" <<< UNMARK node (" + n + ")"); 
+        svg3.selectAll("*").remove();
+        return radius.selected; 
+      } else { 
+        // show the focus on the node
+        setFocusGraphNode(n);
+        return radius.clicked; }
       });
   }
 
   function markEdge(n1, n2){
+    svg3.selectAll("*").remove();
+
     // check if the node 1 was clicked
     var clickedNode1 = svg2.selectAll("circle").filter(function(p){ return n1 == p.id; });
     var wasNode1Clicked = (clickedNode1.attr("r") == radius.clicked);
@@ -618,7 +615,7 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
   // GENERAL FUNCTIONS HERE ---------------------------------------------
 
   //the default coloring
-  recolor(currentColorScale);
+  recolor(coloring.value);
 
   //function called to change the order of the axis
   function order(value) {
@@ -643,7 +640,6 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
   function recolor(value) {
     //change the scale
     c = colorScales[value];
-    currentColorScale = value;
 
     d3.selectAll(".cell")
     .style("fill", function(d) {
@@ -726,8 +722,14 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     for(connection in miserables.edges){      
       //if one end of the edge is connected to i
       if(miserables.edges[connection].source.id == i || miserables.edges[connection].target.id == i){
-        var source = {count: miserables.edges[connection].source.count, group: miserables.edges[connection].source.group, id: miserables.edges[connection].source.id, label: miserables.edges[connection].source.label};
-        var target = {count: miserables.edges[connection].target.count, group: miserables.edges[connection].target.group, id: miserables.edges[connection].target.id, label: miserables.edges[connection].target.label};
+        var source = {count: miserables.edges[connection].source.count, 
+                      group: miserables.edges[connection].source.group, 
+                      id:    miserables.edges[connection].source.id, 
+                      label: miserables.edges[connection].source.label};
+        var target = {count: miserables.edges[connection].target.count, 
+                      group: miserables.edges[connection].target.group, 
+                      id:    miserables.edges[connection].target.id, 
+                      label: miserables.edges[connection].target.label};
 
         //add the edge to the edges
         connections.push({index: connection, source: source.id, target: target.id, value: miserables.edges[connection].value})
@@ -786,7 +788,7 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
 
     //add a group for the nodes and a group for every node
     node2 = svg3.append("g")
-        .attr("class", "nodes")
+      .attr("class", "nodes")
       .selectAll("circle")
       .data(vertices)
       .enter().append("g")
@@ -844,8 +846,9 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
 
   //recolors the fg, we do this separate because it needs to happen more often
   function recolorfg(){
-    svg3.selectAll("circle")
-      .attr("fill", function(d) { return (currentColorScale == "group") ?  c(d.group) : c(d.count); })
+    svg3
+      .selectAll("circle")
+      .attr("fill", function(d) { return (coloring.value == "group") ?  c(d.group) : c(d.count); })
   }
 
   function ticked2() {  
