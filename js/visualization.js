@@ -334,22 +334,22 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
   // IMPORTANT: THEY MUST BE CLASS VARIABLES
   var wasRowMarked = false;
   var wasColumnMarked = false;
-  function markRowColumn(r, col) {
+  function markRowColumn(r, c) {
 
     // identify the corresponding row and row
     var markedRow = 
-      d3.selectAll(".row").filter(function(d, j){ return col+1 == j })
+      d3.selectAll(".row").filter(function(d, j){ return c+1 == j })
         .selectAll(".cell").filter(function(d, j){ return j != r && d.z == 0; });
     var markedColumn = 
-      d3.selectAll(".row").filter(function(d, j){ return col+1 != j })
+      d3.selectAll(".row").filter(function(d, j){ return c+1 != j })
         .selectAll(".cell").filter(function(d, j){return j == r && d.z == 0;});
 
     // check separately if they are already marked
     wasRowMarked = (markedRow.attr("class").indexOf("markedCell") >= 0);
     wasColumnMarked = (markedColumn.attr("class").indexOf("markedCell") >= 0);
 
-    if (wasRowMarked && wasColumnMarked) { console.log(" <<< UNMARK cell (" + r + ", " + col + ")"); }
-    if (!wasRowMarked || !wasColumnMarked) { console.log(" >>> MARK cell (" + r + ", " + col + ")"); }
+    if (wasRowMarked && wasColumnMarked) { console.log(" <<< UNMARK cell (" + r + ", " + c + ")"); }
+    if (!wasRowMarked || !wasColumnMarked) { console.log(" >>> MARK cell (" + r + ", " + c + ")"); }
 
     // clear all the previous marks and selections
     // * please notice that we cannot clear before not to lose the information about the clicked row/column
@@ -365,11 +365,11 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     markedColumn.classed("markedCell", !wasRowMarked || !wasColumnMarked);
 
     // mark text accordingly
-    if (!wasRowMarked) { d3.selectAll(".row text").classed("marked", function(d, j) { return j == col; }); }
+    if (!wasRowMarked) { d3.selectAll(".row text").classed("marked", function(d, j) { return j == c; }); }
     if (!wasColumnMarked) { d3.selectAll(".column text").classed("marked", function(d, j) { return j == r; }); }
 
     // if we have unclicked the cell, then we have also to select it after the unmarking
-    if(wasRowMarked && wasColumnMarked){ selectRowColumn(r, col); }
+    if(wasRowMarked && wasColumnMarked){ selectRowColumn(r, c); }
   }
 
   function onMouseOverText(p, i) {
@@ -619,11 +619,7 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
   // GENERAL FUNCTIONS HERE ---------------------------------------------
 
   //the default coloring
-<<<<<<< HEAD
-  recolor(coloring.value);
-=======
-  recolor(currentColorScale, false);
->>>>>>> origin/master
+  recolor(coloring.value, false);
 
   //function called to change the order of the axis
   function order(value) {
@@ -858,19 +854,12 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
   }
 
   //recolors the fg, we do this separate because it needs to happen more often
-<<<<<<< HEAD
-  function recolorfg(){
-    svg3
-      .selectAll("circle")
-      .attr("fill", function(d) { return (coloring.value == "group") ?  c(d.group) : c(d.count); })
-=======
   function recolorfg(delay){
     dur = (delay) ? 750 : 0;
     svg3.selectAll("circle")
       .transition()
       .duration(dur)
       .attr("fill", function(d) { return (currentColorScale == "group") ?  c(d.group) : c(d.count); })
->>>>>>> origin/master
   }
 
   function ticked2() {  
