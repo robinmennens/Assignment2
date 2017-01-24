@@ -168,7 +168,6 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
 
   // MATRIX SETUP --------------------------------------------------
 
-
   // The default sort order.
   x.domain(orders.name);
 
@@ -254,40 +253,41 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
 
   //called when the mouse moves over a cell
   function onMouseOverCell(p) {
-    console.log(" ++++++ MOUSE OVER cell (" + p.x + ", " + p.y + ")");
+    console.log(" ++++++ MOUSE OVER cell (" + p.y + ", " + p.x + ")");
 
     // show pointer if there is a relationship
     d3.select(this).filter(function(){ return p.z; }).style("cursor", "pointer");
 
     // highlight both row and column in the matrix
-    selectRowColumn(p.x, p.y);
+    selectRowColumn(p.y, p.x);
 
     // highlight the node(s) in the graph
     if (p.x == p.y) { selectNode(p.x); }
-    else { if (p.z > 0) selectEdge(p.x, p.y); }
+    else { if (p.z > 0) selectEdge(p.y, p.x); }
   }
 
   function onMouseOutCell(p) {
     // deselect the row and the column in the matrix
-    selectRowColumn(p.x, p.y);
+    selectRowColumn(p.y, p.x);
     // deselect the node(s) in the graph
     if (p.x == p.y) { selectNode(p.x); }
-    else { if (p.z > 0) selectEdge(p.x, p.y); }
+    else { if (p.z > 0) selectEdge(p.y, p.x); }
 
-    console.log(" ------ MOUSE OUT cell (" + p.x + ", " + p.y + ")");
+    console.log(" ------ MOUSE OUT cell (" + p.y + ", " + p.x + ")");
   }
 
   // highlights the corresponding row and column
   function selectRowColumn(r, c){
+    console.log(" ! chiamato per la cella (" + r + ", " + c + ") !");
 
     // identify the corresponding row and row
     // * please notice that the filtering is necessary to filter out the selected cell
     var selectedRow = 
-      d3.selectAll(".row").filter(function(d, j){ return j == c+1 })
-        .selectAll(".cell").filter(function(d, j){ return j != r && d.z == 0; });
+      d3.selectAll(".row").filter(function(d, j){ return j == r+1 })
+        .selectAll(".cell").filter(function(d, j){ return j != c && d.z == 0; });
     var selectedColumn = 
-      d3.selectAll(".row").filter(function(d, j){ return j != c+1 })
-        .selectAll(".cell").filter(function(d, j){return j == r && d.z == 0;});
+      d3.selectAll(".row").filter(function(d, j){ return j != r+1 })
+        .selectAll(".cell").filter(function(d, j){return j == c && d.z == 0;});
 
     // check separately if they are already selected and if they are not already marked
     var isRowSelected = 
@@ -311,8 +311,18 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     selectedColumn.classed("activeCell", !isColumnSelected);
 
     // highlight text on row and column
-    if (!isRowSelected) { d3.selectAll(".row text").classed("active", function(d, j) { return j == c; }); }
-    if (!isColumnSelected) { d3.selectAll(".column text").classed("active", function(d, j) { return j == r; }); }
+    if (!isRowSelected) {
+      console.log(" ! coloro la riga (" + r + ") !");
+      if (coloring.value == "count") {
+        d3.selectAll(".row text").classed("active", function(d, j) { return j == r+2; }); 
+      } else {
+        d3.selectAll(".row text").classed("active", function(d, j) { return j == r; }); 
+      } 
+    }
+    if (!isColumnSelected) { 
+      console.log(" ! coloro la colonna (" + c + ") !");  
+      d3.selectAll(".column text").classed("active", function(d, j) { return j == c; }); 
+    }
   }
 
   function onCellClick(d){
@@ -321,12 +331,12 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     // only cells with a relationship associated can be clicked
     if (d.z > 0) {
       // mark the cell in the matrix
-      markRowColumn(d.x, d.y);
+      markRowColumn(d.y, d.x);
       // mark the node/edge in the graph
       if (d.x == d.y) {
          markNode(d.x);
       } else {
-        markEdge(d.x, d.y);
+        markEdge(d.y, d.x);
       }
     }
   }  
@@ -338,11 +348,11 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
 
     // identify the corresponding row and row
     var markedRow = 
-      d3.selectAll(".row").filter(function(d, j){ return c+1 == j })
-        .selectAll(".cell").filter(function(d, j){ return j != r && d.z == 0; });
+      d3.selectAll(".row").filter(function(d, j){ return j == r+1 })
+        .selectAll(".cell").filter(function(d, j){ return j != c && d.z == 0; });
     var markedColumn = 
-      d3.selectAll(".row").filter(function(d, j){ return c+1 != j })
-        .selectAll(".cell").filter(function(d, j){return j == r && d.z == 0;});
+      d3.selectAll(".row").filter(function(d, j){ return j != r+1 })
+        .selectAll(".cell").filter(function(d, j){return j == c && d.z == 0;});
 
     // check separately if they are already marked
     wasRowMarked = (markedRow.attr("class").indexOf("markedCell") >= 0);
@@ -364,9 +374,17 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     markedRow.classed("markedCell", !wasRowMarked || !wasColumnMarked);
     markedColumn.classed("markedCell", !wasRowMarked || !wasColumnMarked);
 
-    // mark text accordingly
-    if (!wasRowMarked) { d3.selectAll(".row text").classed("marked", function(d, j) { return j == c; }); }
-    if (!wasColumnMarked) { d3.selectAll(".column text").classed("marked", function(d, j) { return j == r; }); }
+    // mark text accordingly: if at least between row or column is to mark, we mark text on both row and column
+    if (!wasRowMarked || !wasColumnMarked) {
+      // mark row text
+      if (coloring.value == "count"){
+        d3.selectAll(".row text").classed("marked", function(d, j) { return j == r+2; }); 
+      } else {
+        d3.selectAll(".row text").classed("marked", function(d, j) { return j == r; }); 
+      }
+      // mark column text
+      d3.selectAll(".column text").classed("marked", function(d, j) { return j == c; });
+    }
 
     // if we have unclicked the cell, then we have also to select it after the unmarking
     if(wasRowMarked && wasColumnMarked){ selectRowColumn(r, c); }
@@ -380,7 +398,6 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
 
 
   // GRAPH STARTS HERE --------------------------------------------------
-
 
   var edge = svg2.append("g")
       .attr("class", "links")
@@ -439,7 +456,6 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
 
 
   // SCALE STARTS HERE --------------------------------------------
-
 
   function showScale(){
     for(i = 1; i < 159; i++){
@@ -618,9 +634,6 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
 
   // GENERAL FUNCTIONS HERE ---------------------------------------------
 
-  //the default coloring
-  recolor(coloring.value, false);
-
   //function called to change the order of the axis
   function order(value) {
     //change the domain
@@ -647,37 +660,31 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     c = colorScales[value];
 
     d3.selectAll(".cell")
-    .transition()
-    .duration(dur)
-    .style("fill", function(d) {
-      if(d.z >= 1){
-        if(value == "count"){
-          return c(d.z); 
-        } else if (value == "group"){
-          if(nodes[d.x].group == nodes[d.y].group){
-            return c(nodes[d.x].group); 
+      .transition()
+      .duration(dur)
+      .style("fill", function(d) {
+        if(d.z > 0){
+          if (value == "group"){
+            return (nodes[d.x].group == nodes[d.y].group) ? c(nodes[d.x].group) : null;
           } else {
-            return null;
+            return(c(d.z));
           }
         } else {
-            return(c(d.z));
-        }
-      } else {
-        return noColor;
-      }     
-    })
+          return noColor;
+        }     
+      });
 
     //update the graph
     svg2.selectAll("circle")
-    .transition()
-    .duration(750)
-    .attr("fill", function(d, i) {
-      if(value == "count"){
-        return c(nodes[i].count) 
-      } else {
-        return c(nodes[i].group); 
-      }
-    })
+      .transition()
+      .duration(750)
+      .attr("fill", function(d, i) {
+        if(value == "count"){
+          return c(nodes[i].count) 
+        } else {
+          return c(nodes[i].group); 
+        }
+      });
 
     //also recolor the focus graph
     recolorfg(true);
@@ -859,7 +866,7 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     svg3.selectAll("circle")
       .transition()
       .duration(dur)
-      .attr("fill", function(d) { return (currentColorScale == "group") ?  c(d.group) : c(d.count); })
+      .attr("fill", function(d) { return (coloring.value == "group") ?  c(d.group) : c(d.count); })
   }
 
   function ticked2() {  
