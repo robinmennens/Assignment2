@@ -401,7 +401,12 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
 
   function onMouseOverText(p, i) {
     console.log("i:" + i);
-    d3.selectAll(".row text").classed("active", function(d, j) { return i == j; }).style("cursor", "pointer");
+    if (coloring.value == "count"){
+      d3.selectAll(".row text").classed("active", function(d, j) { return i+2 == j; }).style("cursor", "pointer");
+    } else {
+      d3.selectAll(".row text").classed("active", function(d, j) { return i == j; }).style("cursor", "pointer");
+    }
+    
     d3.selectAll(".column text").classed("active", function(d, j) { return i == j; }).style("cursor", "pointer");
   }
 
