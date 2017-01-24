@@ -258,8 +258,6 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     // show pointer if there is a relationship
     d3.select(this).filter(function(){ return p.z; }).style("cursor", "pointer");
 
-    showNodeLabel(p);
-
     // highlight both row and column in the matrix
     selectRowColumn(p.y, p.x);
 
@@ -333,6 +331,10 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     //remove the marked line
     svg2.selectAll(".markedLine")
     .classed("markedLine", false); //class is just used to identify it
+
+    //hide all labels
+    svg2.selectAll("text")
+    .style("opacity", 0);
 
     // only cells with a relationship associated can be clicked
     if (d.z > 0) {
@@ -545,9 +547,7 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
   }
 
   function mouseOverForceGraph(d, i) {
-    console.log(" ++++++ [MOUSE OVER] node (" + i + ")");
-    
-    showNodeLabel(d);
+    console.log(" ++++++ [MOUSE OVER] node (" + i + ")");    
 
     // show the pointer
     d3.select(this).style("cursor", "pointer");
@@ -557,17 +557,25 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     selectNode(i);
   }
 
-  function showNodeLabel(d){
+  function showNodeLabel(id){
+    console.log("show node label" + id);
+
     //show node label    
     svg2.selectAll(".nodelabel")
-    .filter(function(p) { return d.id == p.id; })
+    .filter(function(p) { return id == p.id; })
     .style("opacity", 1);
   }
 
-  function mouseOutForceGraph(d, i){
+  function hideNodeLabel(id){
+    console.log("hide node label" + id);
 
-    //hide node labels
-    svg2.selectAll(".nodelabel").style("opacity", 0);
+    //show node label    
+    svg2.selectAll(".nodelabel")
+    .filter(function(p) { return id == p.id; })
+    .style("opacity", 0);
+  }
+
+  function mouseOutForceGraph(d, i){    
     // select/unselect the row and the column in the matrix
     selectRowColumn(i, i);
     // select/unselect the node in the graph
@@ -587,14 +595,19 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     // otherwise we resize it accordingly
     selectedNode.attr("r", function(){
       if (wasNodeClicked) { 
-        return radius.clicked; }
+        showNodeLabel(n);
+        return radius.clicked; 
+      }
       else { 
         if (wasNodeSelected) {
           console.log(" <<< UNSELECT node (" + n + ")");
+          hideNodeLabel(n);
+          return radius.normal;
         } else {
           console.log(" >>> SELECT node (" + n + ")");
-        }
-        return (wasNodeSelected) ? radius.normal : radius.selected; 
+          showNodeLabel(n);
+          return radius.selected;
+        }        
       }
     });
   }
@@ -618,26 +631,47 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     var clickedNode = svg2.selectAll("circle").filter(function(p){ return n == p.id; });
     var wasNodeClicked = (clickedNode.attr("r") == radius.clicked);
     console.log("la vedi? " + wasColumnMarked + ", " + wasRowMarked);
+
     // shrink all the nodes except the selected one
-    svg2.selectAll("circle").attr("r", radius.normal);
+    svg2.selectAll("circle")
+    .filter( function(p) { return n != p.id; })
+    .attr("r", radius.normal);
+
+    //remove highlighted edges
+    svg2.selectAll(".markedLine").classed("markedLine", false);
+
+    // and also hide all labels
+    svg2.selectAll("text").style("opacity", 0);
 
     if (wasNodeClicked && wasColumnMarked && wasRowMarked) {  }
     else { console.log(" >>> MARK node (" + n + ")"); }
 
+    //transition to small
+    if(wasNodeClicked && wasColumnMarked && wasRowMarked){
+      clickedNode.transition().duration(250).attr("r", radius.normal);
+    } else {
+      clickedNode.transition().duration(250).attr("r", radius.clicked + 5);
+    }
+
     // resize accordingly: if it was clicked, we shrink it to selected; if it was selected we enlarge it to clicked
-    clickedNode.attr("r", function(){ 
+    clickedNode.transition().delay(250).attr("r", function(){ 
       if(wasNodeClicked && wasColumnMarked && wasRowMarked) {
-        console.log(" <<< UNMARK node (" + n + ")"); 
+        console.log(" <<< UNMARK node (" + n + ")");
+        showNodeLabel(n); 
         svg3.selectAll("*").remove();
         return radius.selected; 
       } else { 
         // show the focus on the node
         setFocusGraphNode(n);
+        showNodeLabel(n);
         return radius.clicked; }
       });
   }
 
-  function markEdge(n1, n2){    
+  function markEdge(n1, n2){ 
+
+    showNodeLabel(n1);
+    showNodeLabel(n2);   
 
     // check if the node 1 was clicked
     var clickedNode1 = svg2.selectAll("circle").filter(function(p){ return n1 == p.id; });
@@ -648,7 +682,9 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     var wasNode2Clicked = (clickedNode2.attr("r") == radius.clicked);
 
     // shrink all the nodes
-    svg2.selectAll("circle").attr("r", radius.normal);
+    svg2.selectAll("circle")
+    .filter(function(p) { return n2 != p.id && n1 != p.id })
+    .attr("r", radius.normal);
 
     if (wasNode1Clicked && wasNode2Clicked) { console.log(" <<< UNMARK edge (" + n1 + ", " + n2 + ")"); }
     else { console.log(" >>> MARK edge (" + n1 + ", " + n2 + ")"); }
@@ -657,23 +693,28 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     // if both are clicked or normal we resize them accordingly
     if (wasNode1Clicked == wasNode2Clicked && wasNode1Clicked){
       //make them larger to pop out
-      clickedNode1.transition().duration(250).attr("r", radius.selected + 5);
-      clickedNode2.transition().duration(250).attr("r", radius.selected + 5);
+      clickedNode1.transition().duration(250).attr("r", radius.selected - 2);
+      clickedNode2.transition().duration(250).attr("r", radius.selected - 2);
 
       //shrink them back to the size we want
       clickedNode1.transition().delay(250).attr("r", radius.selected);
       clickedNode2.transition().delay(250).attr("r", radius.selected);
+
+      //remove the marked line  
+      svg2.selectAll(".markedLine").classed("markedLine", false);
     } else {
       clickedNode1.transition().duration(250).attr("r", radius.clicked + 5);
       clickedNode2.transition().duration(250).attr("r", radius.clicked + 5);
 
       clickedNode1.transition().delay(250).attr("r", radius.clicked);
       clickedNode2.transition().delay(250).attr("r", radius.clicked);
-    }
 
-    svg2.selectAll("line")
+      svg2.selectAll("line")
       .filter(function(d) { return ((d.source.id == n1 && d.target.id == n2) || (d.source.id == n2 && d.target.id == n1))})
       .classed("markedLine", true);
+    }
+
+    
 
 
   }
@@ -1018,6 +1059,7 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
         .attr("dx", function(d) {return (d.pos == "right") ? 12 : -12})
         .attr("text-anchor", function(d) {return (d.pos == "right") ? "start" : "end"})
         .attr("dy", ".35em")
+        .classed("nodelabel", true)
         .text(function(d) {return d.label});
 
     //add node labels (values)
