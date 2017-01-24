@@ -158,7 +158,7 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
 
   //when the color dropdown value is changed, change the sort order
   d3.select("#coloring").on("change", function() {
-    recolor(this.value);
+    recolor(this.value, true);
     if(this.value == "count") {
       showScale();
     } else {
@@ -245,7 +245,7 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
         .attr("width", x.bandwidth())
         .attr("height", x.bandwidth())
         .style("fill-opacity", 1)
-        .style("fill", recolor(coloring.value))
+        .style("fill", recolor(coloring.value, false))
         .on("click", onCellClick)
         .on("mouseover", onMouseOverCell)
         .on("mouseout", onMouseOutCell)
@@ -334,22 +334,22 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
   // IMPORTANT: THEY MUST BE CLASS VARIABLES
   var wasRowMarked = false;
   var wasColumnMarked = false;
-  function markRowColumn(r, c) {
+  function markRowColumn(r, col) {
 
     // identify the corresponding row and row
     var markedRow = 
-      d3.selectAll(".row").filter(function(d, j){ return c+1 == j })
+      d3.selectAll(".row").filter(function(d, j){ return col+1 == j })
         .selectAll(".cell").filter(function(d, j){ return j != r && d.z == 0; });
     var markedColumn = 
-      d3.selectAll(".row").filter(function(d, j){ return c+1 != j })
+      d3.selectAll(".row").filter(function(d, j){ return col+1 != j })
         .selectAll(".cell").filter(function(d, j){return j == r && d.z == 0;});
 
     // check separately if they are already marked
     wasRowMarked = (markedRow.attr("class").indexOf("markedCell") >= 0);
     wasColumnMarked = (markedColumn.attr("class").indexOf("markedCell") >= 0);
 
-    if (wasRowMarked && wasColumnMarked) { console.log(" <<< UNMARK cell (" + r + ", " + c + ")"); }
-    if (!wasRowMarked || !wasColumnMarked) { console.log(" >>> MARK cell (" + r + ", " + c + ")"); }
+    if (wasRowMarked && wasColumnMarked) { console.log(" <<< UNMARK cell (" + r + ", " + col + ")"); }
+    if (!wasRowMarked || !wasColumnMarked) { console.log(" >>> MARK cell (" + r + ", " + col + ")"); }
 
     // clear all the previous marks and selections
     // * please notice that we cannot clear before not to lose the information about the clicked row/column
@@ -365,11 +365,11 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     markedColumn.classed("markedCell", !wasRowMarked || !wasColumnMarked);
 
     // mark text accordingly
-    if (!wasRowMarked) { d3.selectAll(".row text").classed("marked", function(d, j) { return j == c; }); }
+    if (!wasRowMarked) { d3.selectAll(".row text").classed("marked", function(d, j) { return j == col; }); }
     if (!wasColumnMarked) { d3.selectAll(".column text").classed("marked", function(d, j) { return j == r; }); }
 
     // if we have unclicked the cell, then we have also to select it after the unmarking
-    if(wasRowMarked && wasColumnMarked){ selectRowColumn(r, c); }
+    if(wasRowMarked && wasColumnMarked){ selectRowColumn(r, col); }
   }
 
   function onMouseOverText(p, i) {
@@ -604,18 +604,26 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     // if at least one of them is clicked we enlarge both
     // if both are clicked or normal we resize them accordingly
     if (wasNode1Clicked == wasNode2Clicked && wasNode1Clicked){
-      clickedNode1.attr("r", radius.selected);
-      clickedNode2.attr("r", radius.selected);
+      clickedNode1.transition().duration(250).attr("r", radius.selected + 5);
+      clickedNode2.transition().duration(250).attr("r", radius.selected + 5);
+      clickedNode1.transition().delay(250).attr("r", radius.selected);
+      clickedNode2.transition().delay(250).attr("r", radius.selected);
     } else {
-      clickedNode1.attr("r", radius.clicked);
-      clickedNode2.attr("r", radius.clicked);
+      clickedNode1.transition().duration(250).attr("r", radius.clicked + 5);
+      clickedNode2.transition().duration(250).attr("r", radius.clicked + 5);
+      clickedNode1.transition().delay(250).attr("r", radius.clicked);
+      clickedNode2.transition().delay(250).attr("r", radius.clicked);
     }
   }
 
   // GENERAL FUNCTIONS HERE ---------------------------------------------
 
   //the default coloring
+<<<<<<< HEAD
   recolor(coloring.value);
+=======
+  recolor(currentColorScale, false);
+>>>>>>> origin/master
 
   //function called to change the order of the axis
   function order(value) {
@@ -637,11 +645,14 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
   }
 
   //function called to change the colors of the visualizations
-  function recolor(value) {
+  function recolor(value, delay) {
+    dur = (delay) ? 750 : 0;
     //change the scale
     c = colorScales[value];
 
     d3.selectAll(".cell")
+    .transition()
+    .duration(dur)
     .style("fill", function(d) {
       if(d.z >= 1){
         if(value == "count"){
@@ -662,6 +673,8 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
 
     //update the graph
     svg2.selectAll("circle")
+    .transition()
+    .duration(750)
     .attr("fill", function(d, i) {
       if(value == "count"){
         return c(nodes[i].count) 
@@ -671,7 +684,7 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     })
 
     //also recolor the focus graph
-    recolorfg();
+    recolorfg(true);
   }
 
 
@@ -803,7 +816,7 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
       .attr("count", function(d) {return d.count;})
       .on("mouseover", showValue)
       .on("mouseout", hideValue)
-      .on("click", function(d) {setFocusGraphNode(d.id)})
+      .on("click", function(d) {onNodeClick(d, d.id)})
       .style("cursor", "pointer");
 
     //add node labels (names)
@@ -841,14 +854,23 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     simulation2.force("link")
         .links(connections);
 
-    recolorfg();
+    recolorfg(false);
   }
 
   //recolors the fg, we do this separate because it needs to happen more often
+<<<<<<< HEAD
   function recolorfg(){
     svg3
       .selectAll("circle")
       .attr("fill", function(d) { return (coloring.value == "group") ?  c(d.group) : c(d.count); })
+=======
+  function recolorfg(delay){
+    dur = (delay) ? 750 : 0;
+    svg3.selectAll("circle")
+      .transition()
+      .duration(dur)
+      .attr("fill", function(d) { return (currentColorScale == "group") ?  c(d.group) : c(d.count); })
+>>>>>>> origin/master
   }
 
   function ticked2() {  
