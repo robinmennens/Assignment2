@@ -617,16 +617,17 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     selectNode(n2);
   }
 
-  function onNodeClick(d, i){
+  function onNodeClick(d, i, graph = true){
+    //graph is true when a node was clicked in the force graph
     console.log(" ______ CLICK node (" + i + ")");
 
     // mark/unmark the cell on the grid
     markRowColumn(i, i);
     // mark/unmark the node in the graph
-    markNode(i);
+    markNode(i, graph);
   }
 
-  function markNode(n){
+  function markNode(n, graph){
     // check if the node was clicked or selected
     var clickedNode = svg2.selectAll("circle").filter(function(p){ return n == p.id; });
     var wasNodeClicked = (clickedNode.attr("r") == radius.clicked);
@@ -656,10 +657,15 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     // resize accordingly: if it was clicked, we shrink it to selected; if it was selected we enlarge it to clicked
     clickedNode.transition().delay(250).attr("r", function(){ 
       if(wasNodeClicked && wasColumnMarked && wasRowMarked) {
-        console.log(" <<< UNMARK node (" + n + ")");
-        showNodeLabel(n); 
-        svg3.selectAll("*").remove();
-        return radius.selected; 
+        if(graph){
+          console.log(" <<< UNMARK node (" + n + ")");
+          showNodeLabel(n); 
+          svg3.selectAll("*").remove();
+          return radius.selected; 
+        } else {          
+          svg3.selectAll("*").remove();
+          return radius.normal; 
+        }
       } else { 
         // show the focus on the node
         setFocusGraphNode(n);
@@ -928,7 +934,7 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
       .attr("count", function(d) {return d.count;})
       .on("mouseover", showValue)
       .on("mouseout", hideValue)
-      .on("click", function(d) {onNodeClick(d, d.id)})
+      .on("click", function(d) {onNodeClick(d, d.id, false)})
       .style("cursor", "pointer");
 
     //add node labels (names)
@@ -1051,7 +1057,7 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
       .attr("fill", "black")
       .attr("group", function(d) {return d.group;})
       .attr("count", function(d) {return d.count;})
-      .on("click", function(d) {onNodeClick(d, d.id)})
+      .on("click", function(d) {onNodeClick(d, d.id, false)})
       .style("cursor", "pointer");
 
     //add node labels (names)
