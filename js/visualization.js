@@ -344,8 +344,7 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
       if (d.x == d.y) {
          markNode(d.x);
       } else {
-        markEdge(d.x, d.y);
-        setFocusGraphEdge(d.x, d.y, d);
+        markEdge(d.x, d.y, d);
       }
     }
   }  
@@ -679,7 +678,7 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
       });
   }
 
-  function markEdge(n1, n2){ 
+  function markEdge(n1, n2, e){ 
 
     showNodeLabel(n1);
     showNodeLabel(n2);   
@@ -713,6 +712,9 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
 
       //remove the marked line  
       svg2.selectAll(".markedLine").classed("markedLine", false);
+
+      //clear the focus edge graph
+      svg3.selectAll("*").remove();
     } else {
       clickedNode1.transition().duration(250).attr("r", radius.clicked + 5);
       clickedNode2.transition().duration(250).attr("r", radius.clicked + 5);
@@ -723,6 +725,9 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
       svg2.selectAll("line")
       .filter(function(d) { return ((d.source.id == n1 && d.target.id == n2) || (d.source.id == n2 && d.target.id == n1))})
       .classed("markedLine", true);
+
+      // show the edge focus graph
+      setFocusGraphEdge(n1, n2, e);
     }
 
     
