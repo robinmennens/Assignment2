@@ -859,6 +859,7 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     connections = [];
 
     var added = false;
+    var sumedges = 0;
 
     for(connection in miserables.edges){      
       //if one end of the edge is connected to i
@@ -874,7 +875,7 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
 
         //add the edge to the edges
         connections.push({index: connection, source: source.id, target: target.id, value: miserables.edges[connection].value})
-        //connections.push(jQuery.extend(true, {}, miserables.edges[connection]));
+        sumedges += miserables.edges[connection].value;
         //if the endpoint is not i, add it to nodes
 
         if(miserables.edges[connection].source.id != i){
@@ -906,6 +907,26 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
         }        
       }
     }
+
+    //add the name
+    svg3.append("text")
+    .classed("nodelabel", true)
+    .text(nodes[i].label)
+    .attr("x", 0)
+    .attr("y", 40);
+
+    var degree = "Degree: " + (vertices.length - 1).toString();
+    //add degree
+    svg3.append("text")    
+    .text(degree)
+    .attr("x", 0)
+    .attr("y", 55);  
+       
+    //add sum edges
+    svg3.append("text")    
+    .text("Sum edges: " + sumedges.toString())
+    .attr("x", 0)
+    .attr("y", 70);
 
     //only when we have many vertices we apply forces to the right and left
     if(vertices.length > 5){
