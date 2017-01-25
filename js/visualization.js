@@ -224,7 +224,7 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     .attr("xlink:href","http://images.clipartpanda.com/question-mark-icon-Question-Mark-Icon.jpg")
     .on("mouseover", function(d) {      
       tip.transition().duration(200).style("opacity", .9);
-      tip.html("-Click on a name to focus on that person. <br/> -Hover over cells to see more information.")
+      tip.html("-Click on a name to focus on that person. <br/> -Hover over cells to see more information.<br />-Click on cells to focus on them.")
          .style("left", 115 + "px")
          .style("top", 140 + "px"); })
     .on("mouseout", function(d) {
