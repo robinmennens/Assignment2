@@ -120,6 +120,7 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
   nodes.forEach(function(node, i) {
     node.index = i;
     node.count = 0;
+    node.degree = 0;
     //this initializes the twoD matrix, for each i -> character we create an array of n other values
     //here these new values are tuples {x coordinate, y coordinate, and a z value}
     //the z value indicates the number of occurrences of this "pair"
@@ -139,6 +140,9 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     //for both the source and target we add the edge value
     nodes[edge.source].count += edge.value;
     nodes[edge.target].count += edge.value;
+
+    nodes[edge.source].degree += 1;
+    nodes[edge.target].degree += 1;
   });
 
   // Precompute the orders.
@@ -148,12 +152,21 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     //order based on the frequencies of the nodes
     count: d3.range(n).sort(function(a, b) { return nodes[b].count - nodes[a].count; }),
     //order based on clustering
-    group: d3.range(n).sort(function(a, b) { return nodes[b].group - nodes[a].group; })
+    group: d3.range(n).sort(function(a, b) { 
+      if (nodes[b].group == nodes[a].group){
+        return nodes[b].count - nodes[a].count; 
+      } else {
+        return nodes[b].group - nodes[a].group;
+      }
+    }),
+    connections: d3.range(n).sort(function(a, b){ return nodes[b].degree - nodes[a].degree; })
   };
+
+  var o = orders["name"]; // important!!!
 
   //when the order dropdown value is changed, change the sort order
   d3.select("#order").on("change", function() {
-    order(this.value);
+    reorder(this.value);
   });
 
   //when the color dropdown value is changed, change the sort order
@@ -253,7 +266,7 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
 
   //called when the mouse moves over a cell
   function onMouseOverCell(p) {
-    console.log(" ++++++ MOUSE OVER cell (" + p.y + ", " + p.x + ")");
+    if (p.z > 0) { console.log(" ++++++ MOUSE OVER cell (" + p.y + ", " + p.x + ")"); }
 
     // show pointer if there is a relationship
     d3.select(this).filter(function(){ return p.z; }).style("cursor", "pointer");
@@ -273,13 +286,11 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     if (p.x == p.y) { selectNode(p.x); }
     else { if (p.z > 0) selectEdge(p.y, p.x); }
 
-    console.log(" ------ MOUSE OUT cell (" + p.y + ", " + p.x + ")");
+    if (p.z > 0) { console.log(" ------ MOUSE OUT cell (" + p.y + ", " + p.x + ")"); }
   }
 
   // highlights the corresponding row and column
   function selectRowColumn(r, c){
-    console.log(" ! chiamato per la cella (" + r + ", " + c + ") !");
-
     // identify the corresponding row and row
     // * please notice that the filtering is necessary to filter out the selected cell
     var selectedRow = 
@@ -297,9 +308,6 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
       (selectedColumn.attr("class").indexOf("activeCell") >= 0) 
       && (selectedColumn.attr("class").indexOf("markedCell") == -1);
 
-    if (isRowSelected && isColumnSelected) { console.log(" <<< UNSELECT cell (" + r + ", " + c + ")"); }
-    if (!isRowSelected && !isColumnSelected) { console.log(" >>> SELECT cell (" + r + ", " + c + ")"); }
-
     // downplay text on all rows and columns
     d3.selectAll(".row text").classed("active", false);
     d3.selectAll(".column text").classed("active", false);
@@ -312,15 +320,13 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
 
     // highlight text on row and column
     if (!isRowSelected) {
-      console.log(" ! coloro la riga (" + r + ") !");
       if (coloring.value == "count") {
         d3.selectAll(".row text").classed("active", function(d, j) { return j == r+2; }); 
       } else {
         d3.selectAll(".row text").classed("active", function(d, j) { return j == r; }); 
       } 
     }
-    if (!isColumnSelected) { 
-      console.log(" ! coloro la colonna (" + c + ") !");  
+    if (!isColumnSelected) {  
       d3.selectAll(".column text").classed("active", function(d, j) { return j == c; }); 
     }
   }
@@ -479,6 +485,7 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
          .style("opacity", 0);
     });
 
+  reorder(order.value);
   recolor(coloring.value);
 
 
@@ -500,7 +507,7 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
       .attr("y", 15) 
       .attr("x", 8)  
       .classed("scaleText", true)   
-      .text("0");
+      .text("1");
 
     svg4.append("text")
       .attr("y", 15)
@@ -551,7 +558,7 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
   }
 
   function mouseOverForceGraph(d, i) {
-    console.log(" ++++++ [MOUSE OVER] node (" + i + ")");    
+    if (d.z > 0) { console.log(" ++++++ [ OVER node (" + i + ")"); }
 
     // show the pointer
     d3.select(this).style("cursor", "pointer");
@@ -562,8 +569,6 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
   }
 
   function showNodeLabel(id){
-    console.log("show node label" + id);
-
     //show node label    
     svg2.selectAll(".nodelabel")
     .filter(function(p) { return id == p.id; })
@@ -571,8 +576,6 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
   }
 
   function hideNodeLabel(id){
-    console.log("hide node label" + id);
-
     //show node label    
     svg2.selectAll(".nodelabel")
     .filter(function(p) { return id == p.id; })
@@ -584,8 +587,6 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     selectRowColumn(i, i);
     // select/unselect the node in the graph
     selectNode(i);
-
-    console.log(" ------ [MOUSE OUT] node (" + i + ")");    
   }
 
   function selectNode(n){
@@ -604,11 +605,9 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
       }
       else { 
         if (wasNodeSelected) {
-          console.log(" <<< UNSELECT node (" + n + ")");
           hideNodeLabel(n);
           return radius.normal;
         } else {
-          console.log(" >>> SELECT node (" + n + ")");
           showNodeLabel(n);
           return radius.selected;
         }        
@@ -635,7 +634,6 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
     // check if the node was clicked or selected
     var clickedNode = svg2.selectAll("circle").filter(function(p){ return n == p.id; });
     var wasNodeClicked = (clickedNode.attr("r") == radius.clicked);
-    console.log("la vedi? " + wasColumnMarked + ", " + wasRowMarked);
 
     // shrink all the nodes except the selected one
     svg2.selectAll("circle")
@@ -738,8 +736,9 @@ d3.json("miserables/les_miserables.json", function(error, miserables) {
   // GENERAL FUNCTIONS HERE ---------------------------------------------
 
   //function called to change the order of the axis
-  function order(value) {
+  function reorder(value) {
     //change the domain
+    o = orders[value];
     x.domain(orders[value]);
 
     var t = svg.transition().duration(2500);
