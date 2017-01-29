@@ -18,7 +18,7 @@ var colorScales = {
     d3.rgb(255, 42, 0),
     d3.rgb(255, 21, 0),
     d3.rgb(255, 0, 0)]),
-  group: d3.scaleOrdinal(d3.schemeCategory10)
+  group: d3.scaleOrdinal(d3.schemeCategory20)
 }
 
 //maps values to colors
