@@ -1,4 +1,6 @@
 //GENERAL VARIABLES ---------------------------------
+var categoricalColors = d3.schemeCategory10;
+categoricalColors.push("#98df8a");
 var colorScales = {
   none: d3.scaleOrdinal(["darkcyan"]),
   count: d3.scaleQuantize().domain([0, 159]).range([      
@@ -18,7 +20,7 @@ var colorScales = {
     d3.rgb(255, 42, 0),
     d3.rgb(255, 21, 0),
     d3.rgb(255, 0, 0)]),
-  group: d3.scaleOrdinal(d3.schemeCategory20)
+  group: d3.scaleOrdinal(categoricalColors)
 }
 
 //maps values to colors
